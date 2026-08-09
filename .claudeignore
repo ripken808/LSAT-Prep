@@ -1,0 +1,32 @@
+# Dependencies
+
+node_modules/
+.venv/
+venv/
+**pycache**/
+\*.pyc
+
+# Env & secrets
+
+.env
+.env.\*
+_.pem
+_.key
+
+# Build artifacts
+
+dist/
+build/
+.next/
+\*.egg-info/
+
+# Lock files (large, rarely need full context)
+
+package-lock.json
+poetry.lock
+uv.lock
+
+# OS / editor
+
+.DS_Store
+.vscode/
