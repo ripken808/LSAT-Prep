@@ -1,0 +1,389 @@
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* Dashboard/chart tokens (dataviz skill reference palette; blue series
+     re-validated against the parchment/wood surfaces below - contrast
+     >=3:1 in both modes, see session notes). Components are written
+     against these roles, not raw hex, so re-theming only touches this
+     block. */
+  --surface-1: #fffdf5;
+  --page-plane: #f9f9f7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --gridline: #e1e0d9;
+  --border: rgba(11, 11, 11, 0.1);
+  --series-1: #2a78d6;
+  --series-1-track: #cde2fb;
+
+  /* --- Growtopia-inspired theme tokens (v0.9) --- */
+  /* Original pixel-chunky palette, not sourced from any game asset.
+     Validated with the dataviz skill's palette validator: dashboard blue
+     and status colors clear >=3:1 against these surfaces; text-on-wood
+     and text-on-button fills clear >=3:1 (see Session Log for the runs). */
+  --theme-page-bg: #fbf3dd;              /* parchment */
+  --wood-fill: #8b5a2b;
+  --wood-fill-hover: #a9713a;
+  --wood-shadow: #4a2f17;
+  --wood-highlight: #c68b4a;
+  --text-on-wood: #fbf3dd;
+  --heading-ink: #3a2411;
+
+  --btn-primary: #388e3c;                /* grass green */
+  --btn-primary-shadow: #24591f;
+  --btn-primary-highlight: #66bb6a;
+
+  --btn-secondary: #2a78d6;              /* sky blue - same as --series-1 */
+  --btn-secondary-shadow: #184f95;
+  --btn-secondary-highlight: #6da7ec;
+
+  --status-good: #0ca30c;                /* fixed status palette - never themed */
+  --status-critical: #d03b3b;
+  --accent-yellow: #ffc107;
+
+  --font-heading: var(--font-pixel-display), monospace;
+  --font-chrome: var(--font-chrome-sans), var(--font-geist-sans), sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+
+    --surface-1: #241a10;
+    --page-plane: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --gridline: #2c2c2a;
+    --border: rgba(255, 255, 255, 0.1);
+    --series-1: #3987e5;
+    --series-1-track: #184f95;
+
+    --theme-page-bg: #1e1712;
+    --wood-fill: #5a3b1e;
+    --wood-fill-hover: #6b4423;
+    --wood-shadow: #241708;
+    --wood-highlight: #8b5a2b;
+    --text-on-wood: #f5e6c8;
+    --heading-ink: #f5e6c8;
+
+    --btn-primary: #2e7d32;
+    --btn-primary-shadow: #1b4d1e;
+    --btn-primary-highlight: #4caf50;
+
+    --btn-secondary: #3987e5;
+    --btn-secondary-shadow: #184f95;
+    --btn-secondary-highlight: #6da7ec;
+
+    --status-good: #0ca30c;
+    --status-critical: #d03b3b;
+    --accent-yellow: #ffc107;
+  }
+}
+
+html {
+  height: 100%;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--heading-ink);
+  background: var(--theme-page-bg);
+  font-family: var(--font-chrome);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+
+h1 {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  line-height: 1.6;
+  color: var(--heading-ink);
+}
+
+/* --- Wood-panel / chunky-block primitives (v0.9 theme) --- */
+/* Original CSS-only pixel-chunky style: wood-grain texture via layered
+   gradients, thick dark outline, beveled highlight/shadow edges. Not
+   sourced from any game's actual assets/sprites/branding. */
+
+.wood-panel {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      var(--wood-fill) 0px,
+      var(--wood-fill) 8px,
+      var(--wood-highlight) 8px,
+      var(--wood-highlight) 9px
+    );
+  border: 3px solid var(--wood-shadow);
+  border-radius: 4px;
+  box-shadow:
+    inset 2px 2px 0 var(--wood-highlight),
+    inset -2px -2px 0 var(--wood-shadow);
+  color: var(--text-on-wood);
+  padding: 16px 20px;
+}
+
+.block-btn {
+  display: inline-block;
+  font-family: var(--font-chrome);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-on-wood);
+  border: 3px solid var(--wood-shadow);
+  border-radius: 4px;
+  padding: 10px 20px;
+  cursor: pointer;
+  background: var(--btn-color, var(--wood-fill));
+  box-shadow:
+    inset 2px 2px 0 var(--btn-highlight, var(--wood-highlight)),
+    inset -3px -3px 0 var(--btn-shadow, var(--wood-shadow));
+}
+
+.block-btn:active:not(:disabled) {
+  box-shadow:
+    inset -2px -2px 0 var(--btn-highlight, var(--wood-highlight)),
+    inset 3px 3px 0 var(--btn-shadow, var(--wood-shadow));
+}
+
+.block-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.block-btn-primary {
+  --btn-color: var(--btn-primary);
+  --btn-highlight: var(--btn-primary-highlight);
+  --btn-shadow: var(--btn-primary-shadow);
+}
+
+.block-btn-secondary {
+  --btn-color: var(--btn-secondary);
+  --btn-highlight: var(--btn-secondary-highlight);
+  --btn-shadow: var(--btn-secondary-shadow);
+}
+
+/* A clean, unstyled reading surface for long-form text (stimulus, question
+   stem, answer choices, explanations) - deliberately NOT themed. Sits
+   inside the themed page as its own high-contrast, plain-font zone. */
+.clean-card {
+  background: #ffffff;
+  color: #171717;
+  border-radius: 8px;
+  padding: 24px 28px;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .clean-card {
+    background: #f4f2ec;
+    color: #171717;
+  }
+}
+
+/* --- Nav (re-themed in v0.9) --- */
+
+.app-nav {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--wood-shadow);
+  border-bottom: 3px solid var(--wood-shadow);
+}
+
+.app-nav-link {
+  font-family: var(--font-chrome);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-on-wood);
+  padding: 8px 16px;
+  border: 2px solid var(--wood-shadow);
+  border-radius: 4px;
+  background: var(--wood-fill);
+  box-shadow:
+    inset 2px 2px 0 var(--wood-highlight),
+    inset -2px -2px 0 var(--wood-shadow);
+}
+
+.app-nav-link:hover {
+  background: var(--wood-fill-hover);
+}
+
+/* --- Dashboard components (v0.4, re-themed v0.9) --- */
+
+.stats-page {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 0 16px 60px;
+  font-family: var(--font-chrome);
+  color: var(--heading-ink);
+}
+
+.stat-tile {
+  background: var(--surface-1);
+  border: 3px solid var(--wood-shadow);
+  border-radius: 6px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow:
+    inset 2px 2px 0 var(--wood-highlight),
+    inset -2px -2px 0 var(--wood-shadow);
+}
+
+.stat-tile-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.stat-tile-value {
+  font-family: var(--font-heading);
+  font-size: 40px;
+  line-height: 1.3;
+  margin-bottom: 14px;
+  color: var(--heading-ink);
+}
+
+.stat-tile-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.meter-track {
+  height: 14px;
+  width: 100%;
+  background: var(--series-1-track);
+  border: 2px solid var(--wood-shadow);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--series-1);
+}
+
+.stats-section {
+  margin-bottom: 32px;
+  background: var(--surface-1);
+  border: 3px solid var(--wood-shadow);
+  border-radius: 6px;
+  padding: 16px 20px;
+  box-shadow:
+    inset 2px 2px 0 var(--wood-highlight),
+    inset -2px -2px 0 var(--wood-shadow);
+}
+
+.stats-section h2 {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--heading-ink);
+  margin-bottom: 14px;
+}
+
+.bar-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bar-table td {
+  padding: 6px 0;
+  vertical-align: middle;
+}
+
+.bar-table .bar-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  padding-right: 12px;
+  width: 1%;
+}
+
+.bar-table .bar-cell {
+  width: 100%;
+}
+
+.bar-track {
+  height: 22px;
+  width: 100%;
+  background: var(--gridline);
+  border: 2px solid var(--wood-shadow);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--series-1);
+  min-width: 2px;
+}
+
+.bar-table .bar-value {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  padding-left: 12px;
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.stats-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* --- Grading result chip (v0.9) --- */
+/* Short status text only - correct/incorrect + the answer letter, never
+   long-form reading content, so it's themed like the rest of the chrome. */
+
+.result-chip {
+  display: inline-block;
+  font-family: var(--font-chrome);
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+  border: 3px solid var(--wood-shadow);
+  border-radius: 4px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.result-chip-correct {
+  background: var(--status-good);
+}
+
+.result-chip-incorrect {
+  background: var(--status-critical);
+}
