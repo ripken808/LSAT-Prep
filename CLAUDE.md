@@ -139,20 +139,31 @@ log is a narrative for humans; the reconstruction prompt is a rebuild spec.
 
 ## Tech Stack
 
-- **Language(s):** Python (backend), TypeScript (frontend)
+- **Language(s):** Python 3.11+ (backend), TypeScript (frontend)
 - **Framework(s):**
-  - Backend: [FastAPI recommended — async-friendly, good fit for calling the Claude
-    API and running similarity checks without blocking]
-  - Frontend: [Next.js (React) recommended — needed for a timed-test UI]
-- **Database:** [PostgreSQL recommended, e.g. via SQLAlchemy/SQLModel] + [pgvector
-  extension or a dedicated vector store for the uniqueness/similarity check]
-- **LLM:** Claude API — generates original questions per LSAT section type (Logical
-  Reasoning, Analytical Reasoning, Reading Comprehension). Do not reproduce real
-  LSAT passages/questions verbatim — generate original content in the same
-  structural/logical style.
-- **Package manager:** [Python: poetry or uv — pick one] / [Frontend: pnpm or npm]
-- **Other key libraries/tools:** [e.g. embedding model or library for similarity
-  checks, testing framework, anything version-sensitive Claude should know about]
+  - Backend: FastAPI (`backend/app/main.py`) — async-friendly, good fit for
+    calling the Anthropic API without blocking.
+  - Frontend: Next.js 16 (App Router, TypeScript, `frontend/`) — chosen up
+    front (v0.1) over a throwaway static page since a timed-test UI (v0.6)
+    will need real client state anyway.
+- **Database:** SQLite via Python's stdlib `sqlite3` (no ORM) — deliberately
+  minimal for now; `backend/app/db.py` is a thin data-access layer designed
+  to be swapped for PostgreSQL + pgvector when v0.5 (dedup) actually needs
+  vector similarity search. Don't add SQLAlchemy/an ORM before that need is
+  real.
+- **LLM:** Anthropic API (`anthropic` Python SDK, `backend/app/generation.py`)
+  — generates original Logical Reasoning questions. Gated behind
+  `GENERATION_MODE=live` (see `backend/app/config.py`); defaults to
+  `GENERATION_MODE=mock`, which serves hand-authored static questions from
+  `backend/app/mock_questions.py` instead, so the app can be run/tested
+  without spending on the API. Do not reproduce real LSAT passages/questions
+  verbatim — generate original content in the same structural/logical style.
+- **Package manager:** Python: `uv` (`backend/pyproject.toml` + `uv.lock`).
+  Frontend: `npm` (`frontend/package.json` + `package-lock.json`).
+- **Other key libraries/tools:** `pytest` (backend tests, no live-API calls
+  in the suite — see `backend/tests/`), `python-dotenv` (loads
+  `backend/.env`), `pydantic` (request/response models). No embedding
+  model/vector store chosen yet — deferred to v0.5.
 
 ## Project Structure
 
@@ -169,56 +180,111 @@ lsat-prep/
                             generated-question quality.
     settings.json   - permissions, hooks
   backend/          - FastAPI + SQLite (stdlib sqlite3, no ORM), uv-managed
-    app/            - main.py (routes), db.py, models.py, config.py,
-                       generation.py (live generate/verify pipeline),
-                       prompts.py (system prompts), mock_questions.py
-                       (hand-authored static questions for GENERATION_MODE=mock)
+    app/
+      main.py       - routes: GET /api/question/current, POST
+                       /api/question/{id}/grade (deterministic key match +
+                       attempts-log side effect), POST /api/generate
+                       (gated behind GENERATION_MODE=live), GET
+                       /api/stats/summary
+      db.py         - sqlite3 connection/schema (questions, attempts tables)
+      models.py     - Pydantic request/response models
+      config.py     - env loading (ANTHROPIC_API_KEY, GENERATION_MODE, DB_PATH)
+      generation.py - live generate -> independent re-solve -> retry pipeline
+      prompts.py    - system prompts (methodology reference, rigor
+                       requirements, target-quality example)
+      mock_questions.py - hand-authored static questions for GENERATION_MODE=mock
     scripts/        - generate_question.py (seeding CLI, mock or live)
-    tests/          - pytest, grading-logic tests (no live API calls)
+    tests/          - pytest: test_grading.py, test_stats.py (no live API calls)
     data/           - sqlite file (gitignored)
-  frontend/         - Next.js (App Router, TypeScript), npm-managed
-    app/page.tsx    - single unstyled page: view question, submit, see grade+explanation
+  frontend/         - Next.js 16 (App Router, TypeScript), npm-managed
+    app/
+      layout.tsx    - root layout, fonts (Geist + Press Start 2P + Fredoka), nav bar
+      globals.css   - theme tokens (light/dark), wood-panel/block-btn/
+                       dashboard component styles
+      page.tsx      - practice page: view question, submit, see grade +
+                       explanation (clean-card reading area, themed chrome)
+      progress/page.tsx - /progress dashboard: overall accuracy, accuracy
+                       by type, attempts over time
   .gitignore
   .claudeignore
   CLAUDE.md
   prompt.md
+  README.md
 ```
 
 [Update this section whenever the structure changes — keep it accurate, not aspirational.]
 
 ## Coding Conventions
 
-- **Naming:** [e.g. snake_case for Python, camelCase for TypeScript/React]
-- **Error handling:** [e.g. Python: custom exception classes + FastAPI exception
-  handlers / TypeScript: Result-style or thrown errors — decide and note here]
-- **Formatting/linting:** [e.g. Python: ruff + black / Frontend: ESLint + Prettier]
-- **Testing:** [e.g. pytest for backend, Vitest for frontend — one test file per
-  module, aim for X% coverage]
-- **Comments/docs style:** [e.g. docstrings on public functions only]
-- **Other conventions:** [anything specific to how you write code here]
+- **Naming:** snake_case for Python (files, functions, variables), camelCase
+  for TypeScript variables/functions, PascalCase for React components/types.
+- **Error handling:** Python: FastAPI's `HTTPException` raised directly from
+  route handlers (see `backend/app/main.py`) — no custom exception hierarchy
+  yet, that's premature at this scale. A dedicated `GenerationError` exists
+  in `backend/app/generation.py` for the generate/verify pipeline. TypeScript:
+  plain thrown `Error`s caught in the component and surfaced via `useState`
+  (see `frontend/app/page.tsx`, `frontend/app/progress/page.tsx`) — no
+  Result-style wrapper.
+- **Formatting/linting:** not yet configured for either side (no ruff/black,
+  no ESLint config beyond Next.js's default). Add if/when it starts to bite.
+- **Testing:** `pytest` for backend (`backend/tests/`), one file per concern
+  (`test_grading.py`, `test_stats.py`) rather than one per module. Tests use
+  a temp SQLite DB per test via `tmp_path` + `monkeypatch` — never touch the
+  real `backend/data/` DB. No live Anthropic API calls in tests (see
+  Workflow Notes). No frontend test suite yet.
+- **Comments/docs style:** minimal — comments only where the *why* isn't
+  obvious from the code (see e.g. the `explanation_viewed` note in
+  `main.py`'s grade route). No docstrings-by-default convention.
+- **Other conventions:** CSS theme values are CSS custom properties
+  (`frontend/app/globals.css`), not hardcoded hex in components — this is
+  what let the v0.9 Growtopia theme reskin v0.4's dashboard by swapping
+  token values only. Any new chart/dashboard UI should load the `dataviz`
+  skill first and run its `validate_palette.js` on any new color choices
+  rather than eyeballing contrast/CVD-safety.
 
 ## Commands
 
-- **Install deps (backend):** `[command]`
-- **Install deps (frontend):** `[command]`
-- **Run dev server (backend):** `[command]`
-- **Run dev server (frontend):** `[command]`
-- **Run tests:** `[command]`
-- **Lint:** `[command]`
-- **Build:** `[command]`
-- **Deploy:** `[command, once hosting platform is decided]`
+- **Install deps (backend):** `cd backend && uv sync`
+- **Install deps (frontend):** `cd frontend && npm install`
+- **Run dev server (backend):** `cd backend && uv run uvicorn app.main:app --reload --port 8000`
+- **Run dev server (frontend):** `cd frontend && npm run dev` (expects
+  `NEXT_PUBLIC_API_URL` in `frontend/.env.local`, defaults to
+  `http://localhost:8000`)
+- **Seed/generate a question:** `cd backend && uv run python scripts/generate_question.py`
+  (mock or live, per `GENERATION_MODE` in `backend/.env`)
+- **Run tests:** `cd backend && uv run pytest`
+- **Lint:** not configured yet.
+- **Build:** not configured yet (no production build has been run for either side).
+- **Deploy:** not yet decided — see Project Overview → Deployment.
 
 ## Do NOT touch / modify without asking
 
-- [e.g. `db/migrations/` — write new migrations, never edit existing ones]
-- [e.g. `.env.example` — update but never commit real secrets or API keys]
-- [anything auto-generated, vendored, or fragile]
+- `backend/.env` and `frontend/.env.local` — never commit real secrets; both
+  are gitignored. `backend/.env.example` is the template and IS meant to be
+  committed, but only with placeholder values.
+- `backend/data/` — the local SQLite runtime data file; gitignored, don't
+  commit it or hand-edit it outside the app's own code paths.
+- `frontend/AGENTS.md` and `frontend/CLAUDE.md` — auto-generated/rewritten by
+  `next dev` itself (Next.js version-specific agent notes); don't hand-edit,
+  they regenerate on their own.
+- `.claude/skills/lsat-methodology/SKILL.md` — keep in sync with
+  `backend/app/prompts.py` if either changes; don't let them drift (see that
+  skill file's own note on this).
 
 ## PR / Commit Conventions
 
-- **Commit message format:** [e.g. Conventional Commits — feat:, fix:, chore:]
-- **Branch naming:** [e.g. feature/xxx, fix/xxx]
-- **PR description should include:** [e.g. summary, testing notes, risk/rollback plan]
+- **Commit message format:** plain, descriptive messages — no strict
+  Conventional Commits prefix enforced. Version-completion commits name the
+  version and summarize what it added (e.g. `v0.3: filtered practice mode +
+  question metadata tagging`); interim/checkpoint commits are labeled as such.
+- **Branch naming:** single `main` branch so far — no feature-branch workflow
+  in use yet at this project's current (single-developer-session) stage.
+- **Tags:** annotated tags (`git tag -a vX.Y -m "..."`) mark completed-version
+  commits only — see Workflow Notes → Finishing a Version checklist. Don't
+  tag work-in-progress commits.
+- **Pushing:** never commit/tag/push without first showing the user what
+  would be pushed and getting their explicit confirmation — see Workflow
+  Notes.
 
 ## Workflow Notes
 

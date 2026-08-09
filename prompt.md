@@ -37,11 +37,21 @@
   v0.9 in `README.md` until a real browser check confirms they render
   correctly.** Both dev servers are running (backend :8000, frontend :3000)
   for that check.
-- **Last touched file(s):** `backend/app/db.py`, `backend/app/models.py`,
-  `backend/app/main.py`, `backend/tests/test_stats.py`,
-  `frontend/app/layout.tsx`, `frontend/app/globals.css`,
-  `frontend/app/page.tsx`, `frontend/app/progress/page.tsx`
-- **Branch:** master
+- **Repo status:** Everything above is pushed to GitHub
+  (`github.com/ripken808/LSAT-Prep`, branch `main`) as a plain checkpoint
+  commit (`96dbc78`, no version tag — nothing has cleared the "genuinely
+  complete" bar yet, so no version tag was applied, per explicit user
+  instruction). `CLAUDE.md` now encodes the full finishing-a-version
+  checklist (update docs → checklist for user confirmation → commit → tag →
+  push) in its Workflow Notes — see Session 3 below. The user's standing
+  preference (confirm before any commit/tag/push, annotated tags with the
+  version name as the note) is also saved to Claude's cross-session memory,
+  not just this repo's `CLAUDE.md`.
+- **Last touched file(s) (docs-only sync pass):** `CLAUDE.md` (Tech Stack,
+  Commands, Coding Conventions, Do NOT touch, PR/Commit Conventions,
+  Project Structure all filled in with concrete current values),
+  `README.md` (Getting Started filled in), `prompt.md` (this file).
+- **Branch:** main
 - **Blockers:**
   1. Need an `ANTHROPIC_API_KEY` from the user to switch to
      `GENERATION_MODE=live` and complete v0.1 for real.
@@ -125,6 +135,94 @@
 ## Session Log
 
 > Newest entry at the top. Tag each entry with the version it belongs to.
+
+### [process/docs] Session 3 — 2026-08-09
+
+**Prompt(s) used:**
+
+```
+From now on, formalize "finishing a version" as a defined checklist, and
+update CLAUDE.md's Workflow Notes to encode it explicitly... [6-step
+checklist: update prompt.md, check off README, write reconstruction prompt,
+commit code+docs together with a version-naming commit message, tag with
+the version number, push commit+tag]. Do not run this checklist for
+work-in-progress states... ask if unsure. Show me the updated section
+before committing that change.
+
+please after finishing a version give me a checklist and if I confirm that
+everything is correct, push to my github repo with the version name as the
+note
+
+please push everything to my github repo and use the version as the note
+[clarified via question: nothing had cleared the "genuinely complete" bar
+yet, so pushed as a plain checkpoint commit with no version tag, per user
+choice]
+
+please update all files including prompt.md and readme.md and then repush
+back up to github based on where we currently are in this project
+```
+
+**What was done:**
+
+- Formalized the "finishing a version" checklist into `CLAUDE.md`'s Workflow
+  Notes (7 steps: update `prompt.md` → check off `README.md` → write
+  reconstruction prompt + Reconstruction Prompts Index row → **present the
+  user a checklist and stop for explicit confirmation** → commit → annotated
+  tag with the version name as the tag's note/message → push commit + tag).
+  Replaced the old looser bullets about reconstruction prompts/README
+  checkboxes. Showed the section for review before committing, per
+  instruction.
+- Added a standing rule (confirm before any commit/tag/push, not just
+  version-completion ones) after the user's follow-up. Saved this as a
+  cross-session feedback memory
+  (`feedback_git_push_confirmation.md`, outside this repo) so it persists
+  beyond `CLAUDE.md` alone.
+- Did the **first-ever commit and push** for this repo's real content.
+  Nothing had cleared the "genuinely complete" bar (v0.1 blocked, v0.4/v0.9
+  unverified in a browser — see Session 2), so per the checklist's own rule
+  this could not be a version-tagged push; asked the user how to label it
+  (`AskUserQuestion`) rather than guessing, and they chose a plain checkpoint
+  commit with no tag. Committed all of v0.1 + v0.4 + v0.9's code plus the
+  `CLAUDE.md` checklist update as commit `96dbc78` ("checkpoint: v0.1 app
+  (mock mode) + v0.4 dashboard + v0.9 theme (WIP, unverified)") and pushed to
+  `github.com/ripken808/LSAT-Prep` on `main`. Verified `.gitignore` actually
+  excludes `frontend/.env.local` and `backend/data/` before staging, and that
+  the one `.env`-pattern file that did get staged (`backend/.env.example`)
+  only ever contained a placeholder (no real key was ever supplied this
+  session).
+- Docs-sync pass (this entry's trigger): filled in every placeholder section
+  of `CLAUDE.md` that had concrete answers available but was never updated —
+  Tech Stack, Commands, Coding Conventions, Do NOT touch, PR/Commit
+  Conventions — and refreshed Project Structure to match the actual current
+  file tree (v0.4/v0.9 additions weren't reflected there before). Filled in
+  `README.md`'s Getting Started with real install/run commands. Fixed a
+  factual error in `prompt.md`'s Current State (said `Branch: master`; the
+  actual branch has been `main` since the repo's very first commit).
+
+**What broke / what to watch:**
+
+- Nothing code-level changed this session — docs and process only. Backend
+  test suite untouched, not re-run (no code changed to invalidate it).
+- v0.1 and v0.4/v0.9's respective blockers (API key; browser verification)
+  are still open — this session didn't address either, just formalized
+  process and synced documentation to reality.
+
+**Next session should:**
+
+- Same as Session 2's handoff: get an `ANTHROPIC_API_KEY` to finish v0.1,
+  and get a real browser check on v0.4/v0.9 before checking either off.
+- Once any version is genuinely complete, follow the now-formal checklist in
+  `CLAUDE.md` → Workflow Notes exactly: prep steps 1-3, present a checklist,
+  wait for confirmation, then commit/tag/push.
+
+**Reconstruction prompt (only if this session completed a version):**
+
+```
+Not applicable — this session didn't complete a version (process/docs work
+only).
+```
+
+---
 
 ### [v0.4 + v0.9] Session 2 — 2026-08-09
 
@@ -247,39 +345,6 @@ Version Plan with the corrected placement, then proceed.
 ```
 Not written — neither v0.4 nor v0.9 has been visually confirmed in a
 browser yet (see What broke / what to watch above).
-```
-
----
-
-### [v0.x] Session [N] — [YYYY-MM-DD]
-
-**Prompt(s) used:**
-
-```
-[paste the key prompt(s) given to Claude this session]
-```
-
-**What was done:**
-
-- [change]
-- [change]
-
-**What broke / what to watch:**
-
-- [anything flaky, untested, or unverified]
-
-**Next session should:**
-
-- [explicit handoff instruction]
-
-**Reconstruction prompt (only if this session completed a version):**
-
-```
-[Self-contained prompt that would rebuild the project from scratch to exactly this
-version's state. Must include: tech stack + key libraries in use, project structure,
-every feature implemented so far with enough detail to reimplement, key decisions
-and why, and an explicit note of what is NOT yet built so scope doesn't creep ahead.
-See CLAUDE.md → Reconstruction Prompts for the full requirement.]
 ```
 
 ---

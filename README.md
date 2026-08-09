@@ -36,15 +36,26 @@ conventions and `prompt.md` for the detailed session-by-session log.
 
 ## Getting Started
 
-[Fill in once commands are finalized in CLAUDE.md]
-
 ```bash
-# install deps
-[command]
+# backend
+cd backend
+uv sync
+cp .env.example .env   # defaults to GENERATION_MODE=mock, no API key needed
+uv run python scripts/generate_question.py   # seeds mock questions
+uv run uvicorn app.main:app --reload --port 8000
 
-# run dev server
-[command]
+# frontend (separate terminal)
+cd frontend
+npm install
+npm run dev
 ```
+
+Then open `http://localhost:3000` (practice) and `http://localhost:3000/progress`
+(stats dashboard). To use real Anthropic-API-generated questions instead of the
+hand-authored mock set, set `GENERATION_MODE=live` and a real `ANTHROPIC_API_KEY`
+in `backend/.env`, then re-run the seeding script.
+
+See `CLAUDE.md` → Commands for the full command reference (tests, etc.).
 
 ## Tech Stack
 
