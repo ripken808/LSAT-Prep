@@ -22,13 +22,13 @@ conventions and `prompt.md` for the detailed session-by-session log.
       not part of the current real LSAT).
 - [ ] **v0.3** — Question metadata tagging + filtered practice mode (pick question
       types / content areas to practice).
-- [ ] **v0.4** — Practice stats dashboard (attempts history + `/progress` page:
+- [x] **v0.4** — Practice stats dashboard (attempts history + `/progress` page:
       overall accuracy, accuracy by type, attempts over time). No streaks/XP/badges.
 - [ ] **v0.5** — Uniqueness/dedup check via vector DB.
 - [ ] **v0.6** — Full-length practice test assembly (real blueprint, timed sections).
 - [ ] **v0.7** — Scaled score conversion (120-180).
 - [ ] **v0.8** — Deploy so friend can access it online.
-- [ ] **v0.9** — Growtopia-inspired visual theme (cosmetic/CSS-only; original
+- [x] **v0.9** — Growtopia-inspired visual theme (cosmetic/CSS-only; original
       pixel-chunky UI, question-reading screen stays clean/unstyled).
 - [ ] v0.x — [add more as scope becomes clearer]
 

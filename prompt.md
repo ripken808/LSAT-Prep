@@ -9,55 +9,51 @@
 
 ## Current State (overwrite this section each time — don't append)
 
-- **Current version:** v0.1 — in progress, NOT complete
-- **Status:** Full generate→verify→grade app is built and working end-to-end,
-  but currently running in `GENERATION_MODE=mock` (see `backend/app/config.py`)
-  to avoid Anthropic API spend during testing. Mock mode serves 3
-  hand-authored static questions from `backend/app/mock_questions.py` — no
-  live API calls happen in this mode. **v0.1's actual goal — proving the live
-  generate→verify pipeline (real Anthropic API calls, independent re-solve
-  check, retry-on-mismatch) works end-to-end — has NOT yet been demonstrated.**
-  The live pipeline code exists and is untouched/unsimplified
-  (`backend/app/generation.py`, `backend/app/prompts.py`) but has never
-  actually been run against the real API. Do not check off v0.1 in
-  `README.md` or write its reconstruction prompt until `GENERATION_MODE=live`
-  has been run for real and verified end-to-end in the browser.
-- **Also this session (explicitly authorized out-of-sequence, since v0.1 is
-  blocked on an external dependency — see Blockers):** built v0.4 (attempts
-  table + `/progress` stats dashboard) and v0.9 (Growtopia-inspired visual
-  theme) end to end. Backend for both is fully covered by passing pytest
-  (13 tests total) and curl-verified real data flow. **Frontend for both has
-  NOT been visually confirmed in an actual rendered browser** — this
-  environment has no working headless browser (chromium cask present but
-  the `.app` binary is missing), so verification stopped at: compiles with
-  no errors, correct classes/CSS-variable tokens present in server-rendered
-  HTML, and the Growtopia-theme palette contrast-validated with the dataviz
-  skill's validator script. Per CLAUDE.md's UI-testing convention, this is
-  disclosed rather than claimed as verified — **do not check off v0.4 or
-  v0.9 in `README.md` until a real browser check confirms they render
-  correctly.** Both dev servers are running (backend :8000, frontend :3000)
-  for that check.
-- **Repo status:** Everything above is pushed to GitHub
-  (`github.com/ripken808/LSAT-Prep`, branch `main`) as a plain checkpoint
-  commit (`96dbc78`, no version tag — nothing has cleared the "genuinely
-  complete" bar yet, so no version tag was applied, per explicit user
-  instruction). `CLAUDE.md` now encodes the full finishing-a-version
-  checklist (update docs → checklist for user confirmation → commit → tag →
-  push) in its Workflow Notes — see Session 3 below. The user's standing
-  preference (confirm before any commit/tag/push, annotated tags with the
-  version name as the note) is also saved to Claude's cross-session memory,
-  not just this repo's `CLAUDE.md`.
-- **Last touched file(s) (docs-only sync pass):** `CLAUDE.md` (Tech Stack,
-  Commands, Coding Conventions, Do NOT touch, PR/Commit Conventions,
-  Project Structure all filled in with concrete current values),
-  `README.md` (Getting Started filled in), `prompt.md` (this file).
+- **Current version:** v0.1 — in progress, NOT complete (v0.4 and v0.9 ARE
+  complete — see below)
+- **v0.1 status:** Full generate→verify→grade app is built and working
+  end-to-end, but currently running in `GENERATION_MODE=mock` (see
+  `backend/app/config.py`) to avoid Anthropic API spend during testing.
+  Mock mode serves 3 hand-authored static questions from
+  `backend/app/mock_questions.py` — no live API calls happen in this mode.
+  **v0.1's actual goal — proving the live generate→verify pipeline (real
+  Anthropic API calls, independent re-solve check, retry-on-mismatch) works
+  end-to-end — has NOT yet been demonstrated.** The live pipeline code
+  exists and is untouched/unsimplified (`backend/app/generation.py`,
+  `backend/app/prompts.py`) but has never actually been run against the
+  real API. Do not check off v0.1 in `README.md` or write its
+  reconstruction prompt until `GENERATION_MODE=live` has been run for real
+  and verified end-to-end in the browser.
+- **v0.4 and v0.9 — now genuinely complete, visually confirmed.** Installed
+  Playwright (its own bundled Chromium, independent of the broken Homebrew
+  chromium cask that blocked verification in Session 2) and captured real
+  screenshots of `/` (both unanswered and post-grade states, via a scripted
+  radio-select + submit interaction) and `/progress`. Confirmed: nav renders
+  as chunky wood-panel buttons; `/progress` shows correct real data (86%
+  overall accuracy, per-type breakdown, attempts-by-day bars) inside
+  wood-bordered panels with pixel-font headings/stat numbers; the practice
+  page's stimulus/choices/explanation render in a clean white
+  high-contrast card untouched by the pixel theme; the graded result shows
+  a themed green "Correct!" chip against a themed red/green status color,
+  with a legible rounded-sans font on nav/buttons/labels as specified. Both
+  versions are now checked off in `README.md`, marked done in the Version
+  Plan below, and have reconstruction prompts written into this session's
+  log entry. **Not yet committed/tagged/pushed** — per the Finishing a
+  Version checklist in `CLAUDE.md`, waiting on the user's explicit
+  confirmation before that happens (see chat for the checklist presented).
+- **Repo status:** Prior work (`96dbc78` checkpoint, `c5b2247` docs sync) is
+  pushed to GitHub (`github.com/ripken808/LSAT-Prep`, branch `main`). This
+  session's changes (README checkboxes, Version Plan status, reconstruction
+  prompts) are local-only, pending user confirmation before commit/tag/push.
+- **Last touched file(s):** `prompt.md` (this file), `README.md` (v0.4/v0.9
+  checkboxes) — no application code changed this session, only verification
+  + docs.
 - **Branch:** main
 - **Blockers:**
   1. Need an `ANTHROPIC_API_KEY` from the user to switch to
      `GENERATION_MODE=live` and complete v0.1 for real.
-  2. Need the user (or a working browser in-session) to visually confirm
-     v0.4's dashboard and v0.9's theme actually render as intended before
-     either is checked off.
+  2. Need the user's explicit confirmation (per the Finishing a Version
+     checklist) before committing/tagging/pushing v0.4 and v0.9.
 
 ---
 
@@ -72,12 +68,12 @@
 | v0.1    | Generate one Logical Reasoning question + answer key + methodology-based explanation (with independent re-solve verification), grade a single user answer against it. No dedup check yet, no UI polish, no filtering. Prove the core generate-verify-grade loop works. | [~] in progress — app built, running in mock mode; live pipeline not yet run/verified |
 | v0.2    | Add Reading Comprehension generation (passage + questions). No Analytical Reasoning — it's not part of the current real LSAT (removed Aug 2024).                                                                                                                       | [ ] not started |
 | v0.3    | Question metadata tagging (section, question_type, content_area) + filtered practice mode (select types/content areas to practice)                                                                                                                                     | [ ] not started |
-| v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [~] built, backend fully tested (9 passing pytest); frontend compiles/serves real data but not yet visually confirmed in a browser |
+| v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [x] DONE — 2026-08-10, visually confirmed via Playwright screenshots |
 | v0.5    | Uniqueness/dedup check via vector DB                                                                                                                                                                                                                                   | [ ] not started |
 | v0.6    | Full-length practice test assembly (real blueprint: 2 LR + 1 RC, correct question counts, timed sections)                                                                                                                                                              | [ ] not started |
 | v0.7    | Scaled score conversion (120-180)                                                                                                                                                                                                                                      | [ ] not started |
 | v0.8    | Deploy so friend can access it online                                                                                                                                                                                                                                  | [ ] not started |
-| v0.9    | Growtopia-inspired visual theme (cosmetic/CSS-only — no grading/generation/data-model changes). Original pixel-chunky UI: wood-panel borders/textures, beveled 3D block buttons, bright saturated palette, applied to nav, buttons, general chrome, and the themed `/progress` dashboard. Press Start 2P reserved for headings/large stat numbers only; a legible rounded sans font for nav links, button labels, and badge text. The question-reading screen (stimulus/stem/choices) stays clean, high-contrast, unstyled by the pixel theme. | [~] built, palette contrast-validated + compiles clean; not yet visually confirmed in a browser |
+| v0.9    | Growtopia-inspired visual theme (cosmetic/CSS-only — no grading/generation/data-model changes). Original pixel-chunky UI: wood-panel borders/textures, beveled 3D block buttons, bright saturated palette, applied to nav, buttons, general chrome, and the themed `/progress` dashboard. Press Start 2P reserved for headings/large stat numbers only; a legible rounded sans font for nav links, button labels, and badge text. The question-reading screen (stimulus/stem/choices) stays clean, high-contrast, unstyled by the pixel theme. | [x] DONE — 2026-08-10, visually confirmed via Playwright screenshots |
 | v0.x    | [add more as scope becomes clearer]                                                                                                                                                                                                                                    | [ ] not started |
 
 ---
@@ -90,10 +86,9 @@
 - [ ] Re-verify the view/submit/grade flow in the browser against the live
       question
 - [ ] Check off v0.1 in README.md and write the reconstruction prompt
-- [ ] Visually confirm v0.4 (`/progress` dashboard) and v0.9 (Growtopia theme)
-      in an actual browser (servers running at :8000/:3000) — no headless
-      browser was available this session to do it directly. Once confirmed,
-      check off both in README.md and write their reconstruction prompts.
+- [ ] Get user confirmation on the v0.4/v0.9 finishing-a-version checklist,
+      then commit + annotated-tag (v0.4, v0.9) + push per CLAUDE.md's
+      Workflow Notes
 
 ## Backlog (out-of-scope for current version — don't build yet)
 
@@ -129,12 +124,295 @@
 | Version | Date completed | Reconstruction prompt location |
 | ------- | -------------- | ------------------------------ |
 | v0.1    | [YYYY-MM-DD]   | [link/anchor to entry below]   |
+| v0.4    | 2026-08-10     | Session 4 entry below          |
+| v0.9    | 2026-08-10     | Session 4 entry below          |
 
 ---
 
 ## Session Log
 
 > Newest entry at the top. Tag each entry with the version it belongs to.
+
+### [v0.4 + v0.9] Session 4 — 2026-08-10
+
+**Prompt(s) used:**
+
+```
+why arent the versions in my readme.md checked off
+[explained: nothing had cleared the "genuinely complete end-to-end" bar —
+v0.1 blocked on API key, v0.4/v0.9 never visually confirmed in a browser]
+
+Continue where we left off
+```
+
+**What was done:**
+
+- Installed Playwright (`npx playwright install chromium`) — its own
+  bundled Chromium, independent of the Homebrew `chromium` cask that was
+  broken in Session 2 (cask present, `.app` binary missing). This is what
+  unblocked real visual verification.
+- Screenshotted `/` (unanswered state) and `/progress` via `npx playwright
+  screenshot`, then wrote a small Playwright script (temporary, not part of
+  the app) to actually select a radio choice, click Submit, and screenshot
+  the graded result state — confirming the themed `.result-chip`
+  (green "Correct! Correct answer: A") and the clean-card explanation
+  render correctly together.
+- Reviewed all three screenshots directly. Confirmed v0.4 and v0.9 both
+  match their stated scope exactly (see reconstruction prompts below for
+  the precise, now-verified state). Updated `prompt.md` (Current State,
+  Version Plan status for v0.4/v0.9 → done) and `README.md` (checked off
+  v0.4 and v0.9) accordingly.
+- Per `CLAUDE.md`'s Finishing a Version checklist, did NOT commit, tag, or
+  push yet — that requires presenting the user a checklist and waiting for
+  explicit confirmation first (next step after this log entry).
+
+**What broke / what to watch:**
+
+- The temporary Playwright install went into `frontend/node_modules/`
+  (gitignored, `--no-save` so `package.json`/`package-lock.json` untouched
+  — confirmed via `git status` before and after). It's not a project
+  dependency, just a one-off verification tool; harmless if left, fine to
+  remove later.
+- v0.1 is still blocked/incomplete — unrelated to and unaffected by this
+  session's work.
+
+**Next session should:**
+
+- Present the finishing-a-version checklist for v0.4 + v0.9 to the user; on
+  confirmation, commit, annotated-tag both (`v0.4`, `v0.9`), and push
+  commit + tags.
+- Separately, still need an `ANTHROPIC_API_KEY` to finish v0.1.
+
+**Reconstruction prompt — v0.4:**
+
+```
+Rebuild this project (LSAT Prep) from an empty repo to exactly v0.4's state.
+
+TECH STACK:
+- Backend: Python 3.11+, FastAPI, stdlib sqlite3 (no ORM), managed with uv
+  (pyproject.toml + uv.lock). Dependencies: fastapi, uvicorn[standard],
+  anthropic, python-dotenv, pydantic; dev: pytest, httpx.
+- Frontend: Next.js 16 (App Router, TypeScript), managed with npm. Uses
+  next/font/google for the Geist font family (defaults from create-next-app
+  at this version — no custom theme yet, that's v0.9).
+- LLM: Anthropic API via the `anthropic` Python SDK, model "claude-sonnet-5".
+
+PROJECT STRUCTURE:
+backend/
+  app/
+    main.py, db.py, models.py, config.py, generation.py, prompts.py,
+    mock_questions.py, __init__.py
+  scripts/generate_question.py
+  tests/__init__.py, test_grading.py, test_stats.py
+  pyproject.toml, uv.lock, .env.example
+  data/ (gitignored, sqlite file lives here)
+frontend/
+  app/layout.tsx, globals.css, page.tsx, progress/page.tsx, favicon.ico
+  (+ standard Next.js scaffold files: next.config.ts, tsconfig.json,
+  eslint.config.mjs, package.json)
+.claude/skills/lsat-methodology/SKILL.md
+.gitignore, .claudeignore, CLAUDE.md, prompt.md, README.md
+
+FEATURES (full v0.1 base + v0.4 additions):
+
+1. Question storage & generation (v0.1 base):
+   - SQLite `questions` table: id, section, question_type, content_area
+     (nullable), stimulus, question_stem, choices (JSON-encoded list of 5
+     strings), correct_answer ("A"-"E"), explanation, verified (bool),
+     created_at (ISO8601 UTC).
+   - `GENERATION_MODE` env var (backend/app/config.py), default "mock".
+     - mock mode: serves 3 hand-authored static LR questions from
+       app/mock_questions.py (types: necessary_assumption, flaw,
+       parallel_reasoning), each with a methodology-correct explanation
+       (negation test / named flaw taxonomy / abstracted logical-structure
+       comparison respectively). No API key needed.
+     - live mode: app/generation.py's generate_and_verify() calls the
+       Anthropic API to generate a question (system prompt in
+       app/prompts.py embeds the full named-methodology reference for all
+       14 official LR question types), then a SEPARATE fresh-context API
+       call independently re-solves it; only stored if both agree; retries
+       up to 3 times on mismatch, else raises GenerationError.
+   - backend/scripts/generate_question.py: CLI that seeds the DB per
+     GENERATION_MODE (mock: wipes and reseeds the 3 static questions; live:
+     runs generate_and_verify() once and inserts the result).
+   - FastAPI routes (backend/app/main.py):
+     - GET /api/question/current — latest question, WITHOUT
+       correct_answer/explanation.
+     - POST /api/question/{id}/grade — body {selected_answer}. Looks up the
+       stored correct_answer, compares (pure deterministic key-match, no
+       LLM call), returns {correct, correct_answer, explanation}. ALSO
+       inserts an attempts-table row as a documented side effect (see #2
+       below) — this happens AFTER the comparison is computed and is never
+       read back into the comparison.
+     - POST /api/generate — wraps generate_and_verify(); returns 400 if
+       GENERATION_MODE != "live".
+   - CORS enabled for http://localhost:3000.
+
+2. Attempts history + stats dashboard (v0.4 — this version's actual scope):
+   - New SQLite `attempts` table: id, question_id (FK), selected_answer,
+     correct (bool as int), explanation_viewed (bool as int — always 1 in
+     this UI, since the grade response includes the explanation atomically;
+     there's no separate "reveal" step to gate on yet), answered_at
+     (ISO8601 UTC).
+   - db.py: get_connection() executes the schema via
+     conn.executescript(SCHEMA) (NOT conn.execute — breaks with
+     "ProgrammingError: You can only execute one statement at a time" once
+     SCHEMA has 2+ CREATE TABLE statements). insert_attempt(),
+     get_overall_stats(), get_stats_by_type() (JOINs attempts to questions,
+     groups by question_type), get_attempts_by_day() (groups by
+     substr(answered_at, 1, 10)).
+   - GET /api/stats/summary — returns StatsSummary: {overall: {total,
+     correct, accuracy: float|null (null when total=0)}, by_type: [{
+     question_type, total, correct, accuracy}], over_time: [{date, count}]}.
+   - Frontend: app/layout.tsx adds a <nav> with "Practice" (/) and
+     "Progress" (/progress) links (next/link). New app/progress/page.tsx
+     (client component): fetches GET /api/stats/summary on mount, renders:
+     a stat-tile with a big accuracy % + a meter bar (correct/total shown
+     below); an "Accuracy by question type" section as a real HTML <table>
+     where each row has the type name, a bar-track/bar-fill div sized by
+     percentage, and the numeric value; an "Attempts over time" section,
+     same bar-table pattern, one row per day.
+   - globals.css: dashboard/theme values defined as CSS custom properties
+     (--surface-1, --page-plane, --text-primary/secondary/muted, --gridline,
+     --border, --series-1 [blue, single hue for magnitude per the dataviz
+     skill's guidance], --series-1-track), both light and
+     `@media (prefers-color-scheme: dark)` variants. Reusable classes:
+     .stats-page, .stat-tile, .stat-tile-value, .meter-track/.meter-fill,
+     .stats-section, .bar-table, .bar-track/.bar-fill. Deliberately
+     token-based (not hardcoded hex in components) so a later visual theme
+     could reskin by changing token values only.
+   - Load the "dataviz" skill before writing any chart/dashboard UI code.
+
+3. Testing: backend/tests/test_grading.py (5 tests: correct/incorrect
+   grading, invalid answer letter, unknown question id, current-question
+   never leaks the key) and test_stats.py (4 tests: empty-state summary,
+   grading records an attempt with correct fields, failed grade requests —
+   bad letter, unknown id — record nothing, multi-type aggregation is
+   correct). All use a temp SQLite DB via pytest's tmp_path + monkeypatch,
+   never touch the real backend/data/ DB, no live API calls in tests.
+
+KEY DECISIONS:
+- SQLite (stdlib, no ORM) chosen over Postgres/pgvector — sufficient for
+  now, defers real DB infra until v0.5 (dedup) actually needs vector
+  similarity search.
+- Attempts logging is a pure side effect of grading — zero read dependency,
+  so gamification/stats can never influence or be influenced by the
+  deterministic grading result.
+- Dashboard placed at v0.4 (right after v0.3's filtered practice, not after
+  deploy) specifically because "accuracy by type" pairs with "go
+  filter-practice your weak type" — motivating continued practice early
+  rather than after every core feature ships.
+- Only "Concept 1" (plain stats dashboard) was scoped — streaks, XP/levels,
+  and mastery badges (Concepts 2 & 3) were explicitly proposed and then
+  deferred to the Backlog, not built.
+
+NOT YET IMPLEMENTED as of v0.4 (don't build ahead of scope):
+- No visual theme — app is Next.js's default unstyled look at this version
+  (theme is v0.9, a separate, later version).
+- No Reading Comprehension (v0.2), no metadata-filtering UI (v0.3 — though
+  the question_type/content_area columns already exist), no dedup (v0.5),
+  no full-length test assembly (v0.6), no scaled scoring (v0.7), no
+  deployment (v0.8).
+- No streaks/XP/badges (deferred to Backlog, not this version).
+- v0.1's live generate/verify pipeline exists in code but has never
+  actually been run against the real Anthropic API — only mock mode has
+  been exercised. This is inherited/known context, not part of v0.4's own
+  scope to resolve.
+```
+
+**Reconstruction prompt — v0.9:**
+
+```
+Rebuild this project (LSAT Prep) from an empty repo to exactly v0.9's state.
+This is everything in the v0.4 reconstruction prompt above, PLUS the
+following visual theme layer (cosmetic/CSS + font changes only — no
+grading/generation/data-model changes of any kind).
+
+ADDITIONAL TECH: two Google Fonts added via next/font/google in
+frontend/app/layout.tsx: Press Start 2P (weight 400, CSS var
+--font-pixel-display) and Fredoka (CSS var --font-chrome-sans). Both
+loaded alongside the existing Geist/Geist_Mono fonts.
+
+VISUAL THEME ("Growtopia-inspired" — an ORIGINAL pixel-chunky look; no
+sprites/logos/assets/branding from any actual game were sourced or copied,
+and no "Growtopia" name/trademark appears anywhere in the app):
+
+- Palette (frontend/app/globals.css, CSS custom properties, light + dark
+  variants under `@media (prefers-color-scheme: dark)`): parchment page
+  background (#fbf3dd light / #1e1712 dark), wood-brown panel/border colors
+  (--wood-fill #8b5a2b, --wood-fill-hover #a9713a, --wood-shadow #4a2f17,
+  --wood-highlight #c68b4a; dark-mode equivalents #5a3b1e/#6b4423/#241708/
+  #8b5a2b), grass-green primary buttons (--btn-primary #388e3c light /
+  #2e7d32 dark, with matching -highlight/-shadow bevel-edge steps), sky-blue
+  secondary buttons (--btn-secondary #2a78d6/#3987e5 — same hex as the
+  dashboard's --series-1, reused deliberately), fixed status colors for
+  correct/incorrect (--status-good #0ca30c, --status-critical #d03b3b —
+  same hex both light/dark, per the dataviz skill's palette convention that
+  status colors are fixed, never themed). Every text-on-fill and
+  data-series-vs-surface color pairing was run through the dataviz skill's
+  `scripts/validate_palette.js` and clears >=3:1 contrast in both modes.
+  The fixed status green/red pair fails the validator's CVD-separation
+  check (expected and documented in the skill itself for that specific
+  pair) — mitigated by NEVER conveying correct/incorrect by color alone:
+  the UI always pairs it with a text label ("Correct!"/"Incorrect.").
+- Reusable CSS classes (globals.css): `.wood-panel` (wood-grain texture via
+  a repeating-linear-gradient of --wood-fill/--wood-highlight stripes at
+  135deg, 3px --wood-shadow border, inset box-shadow bevel highlight/shadow
+  edges). `.block-btn` (+ `.block-btn-primary` / `.block-btn-secondary`
+  modifiers via CSS variable overrides) — chunky beveled buttons using the
+  same inset-shadow bevel technique, with an :active state that inverts the
+  highlight/shadow direction to read as "pressed in." `.result-chip` (+
+  `.result-chip-correct` / `.result-chip-incorrect`) — small wood-bordered
+  status chip, white text, background = --status-good or --status-critical.
+  `.clean-card` — deliberately UNTHEMED: plain white/near-white background,
+  plain system sans font (var(--font-geist-sans)), normal line-height —
+  used for all long-form reading content.
+- Fonts split by role (hard constraint from the user, not a stylistic
+  choice): Press Start 2P (`var(--font-heading)`) reserved for headings
+  (h1) and large stat-tile numbers ONLY — illegible at small sizes.
+  Fredoka (`var(--font-chrome)`) used everywhere else in the themed chrome:
+  nav links, button labels, dashboard section headings' sub-labels,
+  bar-table row labels/values, result-chip text. Body default font-family
+  on <body> is the chrome font; overridden back to the plain system font
+  only inside `.clean-card`.
+- Where the theme is applied vs. NOT applied (hard constraint from the
+  user): nav (`.app-nav`, wood-panel background, each link styled as a
+  small chunky wood block button), Submit/Reload buttons
+  (`.block-btn-primary` / `.block-btn-secondary`), the /progress
+  dashboard's stat-tile/stats-section panels (now `.wood-panel`-bordered
+  with inset bevel, pixel-font headings/hero numbers, Fredoka-font
+  labels/values, same blue --series-1 bars from v0.4 — only the
+  surrounding chrome was reskinned, not the data-bar color itself), and the
+  short correct/incorrect result chip on the practice page. NOT themed:
+  frontend/app/page.tsx wraps the stimulus, question stem, answer choices,
+  AND the post-grade explanation together inside a single `.clean-card` —
+  all of that stays plain, high-contrast, system-font, specifically because
+  it's long-form reading content (the explanation is prose just like the
+  stimulus, so it gets the same treatment, not the themed-chrome treatment).
+
+KEY DECISIONS SPECIFIC TO v0.9:
+- Explanation text was deliberately classified as "reading content" (goes
+  in .clean-card) rather than "chrome" (would get themed) — the user's
+  constraint was "clean reading area, themed frame around it," and
+  explanations are long-form prose exactly like the stimulus.
+- The dashboard's data-bar color (blue, --series-1) was deliberately left
+  as-is from v0.4 rather than re-hued to fit the wood/green palette more
+  "thematically" — magnitude encoding should stay a single validated hue,
+  and re-validating a new hue wasn't necessary when the existing one
+  already passed against the new surfaces.
+- No headless browser was available via the Homebrew `chromium` cask in
+  this environment (binary missing) — visual verification required
+  installing Playwright's own bundled Chromium (`npx playwright install
+  chromium`) instead. If rebuilding in a similar sandboxed environment,
+  expect the same and plan for it.
+
+NOT YET IMPLEMENTED as of v0.9: same list as the v0.4 reconstruction prompt
+above (RC, filtering UI, dedup, full-length assembly, scaled scoring,
+deployment, streaks/XP/badges, and v0.1's live pipeline still unrun) — v0.9
+added ONLY the visual theme layer on top of v0.4, nothing else.
+```
+
+---
 
 ### [process/docs] Session 3 — 2026-08-09
 
