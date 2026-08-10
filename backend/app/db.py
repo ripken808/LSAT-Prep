@@ -71,9 +71,9 @@ def insert_question(conn: sqlite3.Connection, question: dict) -> int:
     return cursor.lastrowid
 
 
-def get_latest_question(conn: sqlite3.Connection) -> sqlite3.Row | None:
+def get_random_question(conn: sqlite3.Connection) -> sqlite3.Row | None:
     return conn.execute(
-        "SELECT * FROM questions ORDER BY id DESC LIMIT 1"
+        "SELECT * FROM questions ORDER BY RANDOM() LIMIT 1"
     ).fetchone()
 
 

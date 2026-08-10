@@ -9,51 +9,40 @@
 
 ## Current State (overwrite this section each time — don't append)
 
-- **Current version:** v0.1 — in progress, NOT complete (v0.4 and v0.9 ARE
-  complete — see below)
-- **v0.1 status:** Full generate→verify→grade app is built and working
-  end-to-end, but currently running in `GENERATION_MODE=mock` (see
-  `backend/app/config.py`) to avoid Anthropic API spend during testing.
-  Mock mode serves 3 hand-authored static questions from
-  `backend/app/mock_questions.py` — no live API calls happen in this mode.
-  **v0.1's actual goal — proving the live generate→verify pipeline (real
-  Anthropic API calls, independent re-solve check, retry-on-mismatch) works
-  end-to-end — has NOT yet been demonstrated.** The live pipeline code
-  exists and is untouched/unsimplified (`backend/app/generation.py`,
-  `backend/app/prompts.py`) but has never actually been run against the
-  real API. Do not check off v0.1 in `README.md` or write its
-  reconstruction prompt until `GENERATION_MODE=live` has been run for real
-  and verified end-to-end in the browser.
-- **v0.4 and v0.9 — now genuinely complete, visually confirmed.** Installed
-  Playwright (its own bundled Chromium, independent of the broken Homebrew
-  chromium cask that blocked verification in Session 2) and captured real
-  screenshots of `/` (both unanswered and post-grade states, via a scripted
-  radio-select + submit interaction) and `/progress`. Confirmed: nav renders
-  as chunky wood-panel buttons; `/progress` shows correct real data (86%
-  overall accuracy, per-type breakdown, attempts-by-day bars) inside
-  wood-bordered panels with pixel-font headings/stat numbers; the practice
-  page's stimulus/choices/explanation render in a clean white
-  high-contrast card untouched by the pixel theme; the graded result shows
-  a themed green "Correct!" chip against a themed red/green status color,
-  with a legible rounded-sans font on nav/buttons/labels as specified. Both
-  versions are now checked off in `README.md`, marked done in the Version
-  Plan below, and have reconstruction prompts written into this session's
-  log entry. **Not yet committed/tagged/pushed** — per the Finishing a
-  Version checklist in `CLAUDE.md`, waiting on the user's explicit
-  confirmation before that happens (see chat for the checklist presented).
-- **Repo status:** Prior work (`96dbc78` checkpoint, `c5b2247` docs sync) is
-  pushed to GitHub (`github.com/ripken808/LSAT-Prep`, branch `main`). This
-  session's changes (README checkboxes, Version Plan status, reconstruction
-  prompts) are local-only, pending user confirmation before commit/tag/push.
-- **Last touched file(s):** `prompt.md` (this file), `README.md` (v0.4/v0.9
-  checkboxes) — no application code changed this session, only verification
-  + docs.
+- **Current version:** v0.1 — scope revised, now complete (see below).
+  v0.4 and v0.9 are also complete, committed, tagged, and pushed.
+- **v0.1 — REVISED SCOPE, now done.** User redirected v0.1 away from live
+  Anthropic API generation to a hand-authored, independently-verified
+  question bank (see Key Decisions Log). `backend/app/mock_questions.py` now
+  holds 14 original LR questions — one per official LR question type — each
+  independently re-solved by a fresh subagent (no memory of the marked
+  answer) before being kept; 11/11 new ones matched on the first pass, zero
+  revisions needed. `GET /api/question/current` was fixed to serve a random
+  question from the full bank on every call (previously always returned the
+  single most-recently-inserted row, which meant it appeared to "repeat" once
+  more than one question existed — user caught this in testing). The
+  original live-API pipeline (`generation.py`, `prompts.py`,
+  `GENERATION_MODE=live`) remains in the codebase untouched, as an optional
+  future path — not required for v0.1 to be done.
+- **v0.4 and v0.9 — complete and pushed.** Visually confirmed via Playwright
+  screenshots in Session 4, then committed (`6725b0b`), annotated-tagged
+  (`v0.4`, `v0.9`), and pushed to GitHub after user confirmation.
+- **Repo status:** `96dbc78` (checkpoint), `c5b2247` (docs sync), and
+  `6725b0b` (v0.4+v0.9 done, tagged) are all pushed to
+  `github.com/ripken808/LSAT-Prep` on `main`. This session's v0.1 work
+  (11 new questions, random-selection fix, docs) is local-only, pending the
+  Finishing a Version checklist (present → confirm → commit → tag → push).
+- **Last touched file(s):** `backend/app/mock_questions.py` (11 new
+  questions), `backend/app/db.py` (`get_random_question` replacing
+  `get_latest_question`), `backend/app/main.py` (route now serves random),
+  `prompt.md`, `README.md`.
 - **Branch:** main
-- **Blockers:**
-  1. Need an `ANTHROPIC_API_KEY` from the user to switch to
-     `GENERATION_MODE=live` and complete v0.1 for real.
-  2. Need the user's explicit confirmation (per the Finishing a Version
-     checklist) before committing/tagging/pushing v0.4 and v0.9.
+- **Blockers:** none for v0.1 itself. User has also asked for: (1) an
+  explicit shuffle-through-all-types control, (2) cycle-through-a-specific-
+  type practice, (3) a full timed test. (2) is v0.3's exact scope; (3) is
+  v0.6's scope and has a hard dependency on v0.2 (Reading Comprehension,
+  not started) for a real-blueprint test — flagged to the user, plan
+  pending their direction (see chat).
 
 ---
 
@@ -65,7 +54,7 @@
 
 | Version | Scope                                                                                                                                                                                                                                                                  | Status          |
 | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| v0.1    | Generate one Logical Reasoning question + answer key + methodology-based explanation (with independent re-solve verification), grade a single user answer against it. No dedup check yet, no UI polish, no filtering. Prove the core generate-verify-grade loop works. | [~] in progress — app built, running in mock mode; live pipeline not yet run/verified |
+| v0.1    | **REVISED 2026-08-10.** Store a hand-authored, independently-verified Logical Reasoning question bank (no live Anthropic API required) covering multiple official LR question types, with answer key + methodology-based explanation per question; serve a random question and grade a user's answer against it. Verification method: fresh subagent re-solves each question with no memory of the marked answer; only keep on match. The original live-API generate/verify pipeline remains in the codebase as an optional future path, not required for this version. No dedup check yet, no UI polish, no filtering, no full-length test. | [x] DONE — 2026-08-10, 14 questions (all 14 official LR types), 11/11 independently verified, random-serve bug fixed |
 | v0.2    | Add Reading Comprehension generation (passage + questions). No Analytical Reasoning — it's not part of the current real LSAT (removed Aug 2024).                                                                                                                       | [ ] not started |
 | v0.3    | Question metadata tagging (section, question_type, content_area) + filtered practice mode (select types/content areas to practice)                                                                                                                                     | [ ] not started |
 | v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [x] DONE — 2026-08-10, visually confirmed via Playwright screenshots |
@@ -80,15 +69,14 @@
 
 ## Next Up (current version's immediate tasks)
 
-- [ ] Get ANTHROPIC_API_KEY from user, set GENERATION_MODE=live in backend/.env
-- [ ] Run scripts/generate_question.py in live mode, sanity-check the real
-      generated question + explanation
-- [ ] Re-verify the view/submit/grade flow in the browser against the live
-      question
-- [ ] Check off v0.1 in README.md and write the reconstruction prompt
-- [ ] Get user confirmation on the v0.4/v0.9 finishing-a-version checklist,
-      then commit + annotated-tag (v0.4, v0.9) + push per CLAUDE.md's
-      Workflow Notes
+- [ ] Get user confirmation on the v0.1 finishing-a-version checklist, then
+      commit + annotated-tag (v0.1) + push per CLAUDE.md's Workflow Notes
+- [ ] Decide next version to build: v0.3 (filtered/cycle-by-type practice —
+      small, no dependencies) vs. v0.2 (Reading Comprehension, a
+      prerequisite for a real-blueprint v0.6 full-length timed test)
+- [ ] Scope v0.6 (full-length timed test) properly before building — user
+      asked for "a full test prep with a timer"; needs explicit scope
+      decision on LR-only interim vs. waiting for v0.2/RC (see chat)
 
 ## Backlog (out-of-scope for current version — don't build yet)
 
@@ -113,6 +101,9 @@
 | 2026-08-09   | Concrete v0.9 palette: parchment `#fbf3dd` page bg, wood-brown `#8b5a2b` panels (shadow `#4a2f17` / highlight `#c68b4a` bevel edges), grass-green `#388e3c` primary buttons, sky-blue `#2a78d6` secondary buttons (reused from the dashboard's already-validated series color), fixed status green/red (`#0ca30c`/`#d03b3b`) for correct/incorrect only. All chosen with the dataviz skill's `validate_palette.js` — every text-on-fill and data-series-vs-surface pairing clears >=3:1 contrast in both light/dark; status green/red fails the CVD-separation check (expected/documented in the skill itself) so the UI never conveys correct/incorrect by color alone, always with a text label too. | Originally proposed palette (proposal turn) was directional only; this session made it concrete and checked it against real contrast math instead of eyeballing, per the dataviz skill's explicit instruction to validate rather than reason about it. |
 | 2026-08-09   | Split "chrome" vs "reading" surfaces: `.clean-card` (plain white/light, system font) wraps stimulus/question stem/answer choices AND the post-grade explanation; a small `.result-chip` (themed, wood-bordered) carries only the short correct/incorrect + answer-letter status | The user's constraint was "clean reading area, themed frame around it." Explanation text is long-form reading content like the stimulus, so it stays in the clean card; the correct/incorrect verdict is short status text, so it's themed like the rest of the chrome. |
 | 2026-08-09   | v0.4 and v0.9 built this session despite v0.1 still being incomplete/blocked | Explicit user instruction ("proceed") to work on unblocked, independent work while v0.1 waits on an `ANTHROPIC_API_KEY` from the user — a deliberate exception to the "finish current version first" convention, not a default to repeat without similar explicit direction. |
+| 2026-08-10   | v0.1 revised: dropped the live-Anthropic-API requirement in favor of a hand-authored, independently-verified static question bank | User explicitly asked to move away from live AI generation to "verified used Questions" — clarified (after flagging copyright risk around real/official LSAT questions) to mean ORIGINAL questions, verified for correctness. Live pipeline code kept, untouched, as an optional future path. |
+| 2026-08-10   | Verification method for new questions: fresh subagent (no memory of marked answer) independently re-solves each one; only keep on match | Mirrors the exact independent re-solve check already documented in CLAUDE.md's Explanation Methodology, just run by Claude Code during authoring instead of via a live API call from the running app — satisfies "no Anthropic API used" while preserving the same rigor. Result: 11/11 new questions matched on first pass. |
+| 2026-08-10   | `GET /api/question/current` changed from "always the latest-inserted row" to "random row on every call" | User reported the app kept showing the same question after the bank grew to 14 — the endpoint had no concept of multiple questions since v0.1 was originally scoped around a single question. Minimal fix: `ORDER BY RANDOM() LIMIT 1` instead of `ORDER BY id DESC LIMIT 1`; kept the same route/URL to avoid frontend churn. |
 
 ---
 
@@ -123,15 +114,231 @@
 
 | Version | Date completed | Reconstruction prompt location |
 | ------- | -------------- | ------------------------------ |
-| v0.1    | [YYYY-MM-DD]   | [link/anchor to entry below]   |
+| v0.1    | 2026-08-10     | Session 5 entry below          |
 | v0.4    | 2026-08-10     | Session 4 entry below          |
 | v0.9    | 2026-08-10     | Session 4 entry below          |
+
+Note on ordering: v0.1 was completed chronologically AFTER v0.4 and v0.9
+(its scope was revised mid-project — see Key Decisions Log). The commit
+that gets tagged `v0.1` will therefore already contain v0.4/v0.9's code
+too, since it builds on the current `main` history. v0.1's reconstruction
+prompt below describes only v0.1's own logical scope, for anyone who wants
+to rebuild just that layer.
 
 ---
 
 ## Session Log
 
 > Newest entry at the top. Tag each entry with the version it belongs to.
+
+### [v0.1] Session 5 — 2026-08-10
+
+**Prompt(s) used:**
+
+```
+Lets work on v0.1. Instead of using AI to generate the questions, lets get
+a set of verified used Questions and store the answers and reasoning. Lets
+include multiple questions accross different types of questions seen on
+the LSAT. I want to work on constructing the foundation algorithm to start
+this project
+[clarified across 2 rounds: not real/copyrighted LSAT questions (flagged
+copyright risk) - original, hand-verified questions, generated without the
+Anthropic API]
+
+Lets go with option 1 for now
+[Option 1 = Claude hand-authors + independently verifies via fresh
+subagent, no live API]
+
+I am testing it and it is only repeating the same question. I need
+multiple questions under each type of question that can be seen on the
+LSAT with the correct answer and reasoning: [pasted the role_of_statement
+question, which was being served on every request]
+
+It works and there are multiple LSAT Prep questions per type. Finish v0.1
+and then give me a way to shuffle through all types, cycle through a
+specific type, and to give me a full test prep with a timer
+```
+
+**What was done:**
+
+- Authored 11 new original LR questions (one each for the 11 official types
+  not yet covered: sufficient_assumption, strengthen, weaken, inference,
+  main_point, method_of_reasoning, principle, resolve_explain,
+  evaluate_argument, point_at_issue, role_of_statement), matching the
+  existing rigor bar (formal/conditional notation where applicable, named
+  logical forms, every choice explicitly addressed) — added to
+  `backend/app/mock_questions.py`, bringing the bank to 14 questions
+  covering all 14 official LR types.
+- **Independently verified all 11** via 11 parallel fresh subagents (Agent
+  tool, `general-purpose` type) — each given only the stimulus/stem/
+  choices/type (never the marked answer), asked to solve using the named
+  method for that type. 11/11 matched my intended answer on the first pass;
+  zero revisions needed.
+- Validated schema (14 unique types, 5 choices each, valid answer letters),
+  ran the full pytest suite (still 9/9 passing — no test changes needed),
+  reseeded the DB (`scripts/generate_question.py`, mock mode), and
+  curl-verified grading + `/api/stats/summary` aggregation work correctly
+  across the new questions.
+- **Bug fix (user-reported):** `GET /api/question/current` always did
+  `ORDER BY id DESC LIMIT 1` (a leftover from when v0.1 only ever had one
+  question) — with 14 questions now in the bank, this meant the app always
+  served the single most-recently-seeded one, appearing to "repeat."
+  Renamed `get_latest_question` → `get_random_question` in `db.py`
+  (`ORDER BY RANDOM() LIMIT 1`), swapped it into the route in `main.py`.
+  Kept the same route path (`/api/question/current`) to avoid unnecessary
+  frontend churn. Verified live against the running dev server: 6
+  consecutive calls returned 6 different question types. Tests still pass.
+- Revised v0.1's Version Plan scope entry, Current State, and Key Decisions
+  Log to reflect the new approach; the original live-API pipeline
+  (`generation.py`, `prompts.py`, `GENERATION_MODE=live`) is untouched and
+  remains available as an optional future path, just no longer required
+  for v0.1.
+- Per `CLAUDE.md`'s Finishing a Version checklist, did NOT commit, tag, or
+  push yet — presenting the checklist next, for user confirmation.
+
+**What broke / what to watch:**
+
+- The `attempts` table has a handful of orphaned rows from before this
+  session's reseed (old `question_id`s 1-3 got deleted by the seed
+  script's wipe-and-reseed, but `attempts` has no cascade delete). This
+  makes `get_overall_stats()`'s raw count drift slightly from
+  `get_stats_by_type()`'s JOIN-filtered count (orphaned attempts silently
+  excluded from the by-type breakdown). Pre-existing behavior, not
+  introduced this session, and not something the user has asked to fix —
+  noting it here so it isn't a surprise later, e.g. if v0.5 dedup work
+  touches the `questions` table again.
+- User has asked for three more things in the same message: (1) an
+  explicit shuffle-through-all-types affordance — largely already
+  satisfied by the random-serve fix above; (2) cycle through a specific
+  type — this is v0.3's exact scope (filtered practice); (3) a full test
+  with a timer — this is v0.6's scope, and v0.6's stated definition
+  ("real blueprint: 2 LR + 1 RC") has a hard dependency on v0.2 (Reading
+  Comprehension, not started). Flagged to the user in chat rather than
+  building either inline as part of "finishing v0.1" — both are already
+  their own scoped versions in the Version Plan, and pulling future-version
+  work into the current one is exactly what the Versioning Strategy (and
+  the checklist the user asked me to formalize) exists to prevent.
+
+**Next session should:**
+
+- Get user confirmation on this checklist, then commit + tag `v0.1` + push.
+- Get the user's decision on ordering: v0.3 (filtered/cycle-by-type,
+  small, unblocked) vs. v0.2 (RC, a prerequisite for a real-blueprint
+  v0.6 timed test) vs. an explicitly-scoped LR-only interim timed-test
+  version if the user doesn't want to wait for RC.
+
+**Reconstruction prompt — v0.1 (revised scope):**
+
+```
+Rebuild this project (LSAT Prep) to v0.1's (revised) state: a Logical
+Reasoning question bank, served and graded end-to-end, with NO live LLM
+API dependency required.
+
+TECH STACK:
+- Backend: Python 3.11+, FastAPI, stdlib sqlite3 (no ORM), managed with uv.
+  Dependencies: fastapi, uvicorn[standard], anthropic (used only by the
+  optional live-generation path, not required for v0.1 itself),
+  python-dotenv, pydantic; dev: pytest, httpx.
+- Frontend: Next.js 16 (App Router, TypeScript), npm-managed.
+
+PROJECT STRUCTURE:
+backend/app/{main.py, db.py, models.py, config.py, generation.py,
+  prompts.py, mock_questions.py, __init__.py}
+backend/scripts/generate_question.py
+backend/tests/{test_grading.py, test_stats.py}
+frontend/app/{layout.tsx, page.tsx}
+(v0.4's progress/page.tsx and stats plumbing, and v0.9's theme, are
+separate versions layered on top — see their own reconstruction prompts.
+This entry describes v0.1's layer only.)
+
+FEATURES:
+
+1. Question bank (the actual v0.1 deliverable): a SQLite `questions` table
+   (id, section, question_type, content_area, stimulus, question_stem,
+   choices [JSON array of 5 strings], correct_answer ["A"-"E"],
+   explanation, verified [bool], created_at) populated with 14
+   hand-authored original Logical Reasoning questions — one per official
+   LR type (necessary_assumption, sufficient_assumption, strengthen,
+   weaken, flaw, inference, main_point, method_of_reasoning,
+   parallel_reasoning, principle, resolve_explain, evaluate_argument,
+   point_at_issue, role_of_statement). Each question's explanation applies
+   the official named method for its type explicitly (negation test for
+   necessary assumption, named flaw taxonomy for flaw, conditional-logic
+   notation for sufficient assumption/inference, abstracted structure
+   comparison for parallel reasoning, etc.) and addresses every answer
+   choice, not just the correct one.
+
+2. Verification algorithm used to build the bank (the "foundation
+   algorithm"): for each question, (a) author it following the named
+   methodology for its type, (b) hand off to a FRESH context (a subagent
+   with zero memory of which answer was marked correct) containing only
+   the stimulus/stem/choices/type, (c) have it independently solve using
+   the same named method, (d) only keep the question if its answer matches
+   the intended one. No live API calls required - this runs once, during
+   authoring, not at app runtime. (Historical note: an earlier version of
+   this project attempted a live-Anthropic-API generate+verify pipeline at
+   runtime instead - that code still exists at
+   backend/app/generation.py/prompts.py, gated behind
+   GENERATION_MODE=live in backend/app/config.py, but is NOT required and
+   was never the mechanism that actually got v0.1 to a working state.)
+
+3. Serving: `GET /api/question/current` returns a RANDOM question from the
+   bank on every call (`ORDER BY RANDOM() LIMIT 1` in SQLite) - NOT the
+   latest-inserted row (that was the original, buggy behavior when there
+   was only ever one question; it silently became a "repeats the same
+   question forever" bug once the bank grew past one row - watch for this
+   if reimplementing naively). Response excludes correct_answer/explanation.
+
+4. Grading: `POST /api/question/{id}/grade` takes {selected_answer},
+   looks up the stored correct_answer, does a pure deterministic string
+   comparison (no LLM call, no dependency on anything AI-related), returns
+   {correct, correct_answer, explanation}. The explanation is always
+   returned regardless of correctness, matching real LSAT prep convention.
+
+5. Seeding: `backend/scripts/generate_question.py`, run as
+   `uv run python scripts/generate_question.py` with `GENERATION_MODE=mock`
+   (the default) - wipes the `questions` table and reinserts all 14 static
+   questions from `mock_questions.py`. No API key needed for this path at
+   all.
+
+6. Frontend: a single page fetches the current (random) question, renders
+   radio-button choices, submits an answer, and displays correct/incorrect
+   plus the stored explanation.
+
+KEY DECISIONS:
+- The live-Anthropic-API path was explicitly de-scoped from v0.1's
+  definition of "done," per user direction, after clarifying that
+  "verified used questions" meant ORIGINAL hand-verified content, not real/
+  copyrighted LSAT questions (real questions were flagged as a copyright
+  risk and as directly conflicting with this project's own anti-
+  memorization design goal - see CLAUDE.md Project Overview).
+- Verification uses a fresh subagent re-solve (mirrors the exact method
+  CLAUDE.md's Explanation Methodology section already specifies for live
+  generation) rather than a live API call - same rigor, zero runtime cost/
+  dependency.
+- `GET /api/question/current`'s random-selection behavior was a direct fix
+  to a real bug the user hit while testing (always serving the same
+  question) - not a design choice made in isolation; if you rebuild this
+  from scratch with a multi-question bank in mind from day one, make sure
+  the "current question" endpoint is random/rotating from the start.
+
+NOT YET IMPLEMENTED as of v0.1 (don't build ahead of scope):
+- No Reading Comprehension (v0.2).
+- No filtered/cycle-by-a-specific-type practice mode (v0.3) - though
+  question_type is already stored per question, so this is mostly a
+  filtering-endpoint + UI-control problem, not a data-model problem.
+- No dedup/uniqueness check (v0.5) - not urgent yet since all 14 questions
+  are original and hand-verified, but will matter once more get added.
+- No full-length test assembly or timer (v0.6) - and note v0.6's stated
+  definition requires RC (v0.2) for a real-blueprint test.
+- No scaled scoring (v0.7), no deployment (v0.8).
+- The live-API generate/verify pipeline exists in code but has never
+  actually been run against the real Anthropic API - it's dead code from
+  v0.1's original (abandoned) approach, kept intentionally as a possible
+  future path, not deleted.
+```
+
+---
 
 ### [v0.4 + v0.9] Session 4 — 2026-08-10
 

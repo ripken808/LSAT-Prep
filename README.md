@@ -16,8 +16,10 @@ conventions and `prompt.md` for the detailed session-by-session log.
 > (Version Plan table + Session Log) and the required reconstruction prompt. Don't
 > check a box off early to look further along than the project actually is.
 
-- [ ] **v0.1** — Generate one Logical Reasoning question + verified answer key +
-      methodology-based explanation, grade a single answer. Core loop only.
+- [x] **v0.1** — Hand-authored, independently-verified Logical Reasoning
+      question bank (14 questions, all 14 official LR types) + verified answer
+      key + methodology-based explanation, serve a random question and grade
+      a user's answer. No live Anthropic API required (revised scope).
 - [ ] **v0.2** — Add Reading Comprehension generation (no Analytical Reasoning —
       not part of the current real LSAT).
 - [ ] **v0.3** — Question metadata tagging + filtered practice mode (pick question

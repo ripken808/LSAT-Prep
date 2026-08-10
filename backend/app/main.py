@@ -7,9 +7,9 @@ from app.config import GENERATION_MODE
 from app.db import (
     get_attempts_by_day,
     get_connection,
-    get_latest_question,
     get_overall_stats,
     get_question_by_id,
+    get_random_question,
     get_stats_by_type,
     insert_attempt,
     insert_question,
@@ -50,8 +50,11 @@ def _row_to_public(row) -> QuestionPublic:
 
 @app.get("/api/question/current", response_model=QuestionPublic)
 def get_current_question():
+    """Returns a random question from the bank on every call, so repeated
+    requests (e.g. the frontend's Reload button) cycle through different
+    questions instead of always re-serving the same one."""
     with get_connection() as conn:
-        row = get_latest_question(conn)
+        row = get_random_question(conn)
     if row is None:
         raise HTTPException(status_code=404, detail="No question has been generated yet")
     return _row_to_public(row)
