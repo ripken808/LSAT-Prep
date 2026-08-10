@@ -183,11 +183,15 @@ lsat-prep/
     app/
       main.py       - routes: GET /api/question/current (random LR
                        question), GET /api/passage/random (random RC
-                       passage + all its questions), POST
-                       /api/question/{id}/grade (deterministic key match +
-                       attempts-log side effect, works for LR and RC),
-                       POST /api/generate (gated behind GENERATION_MODE=
-                       live), GET /api/stats/summary
+                       passage + all its questions), GET /api/taxonomy
+                       (types + content areas with counts, drives the
+                       filter UI), GET /api/questions/filtered (multi-select
+                       by section/question_type/content_area; returns the
+                       whole matching set in random order, 200 + total=0 on
+                       no match), POST /api/question/{id}/grade
+                       (deterministic key match + attempts-log side effect,
+                       works for LR and RC), POST /api/generate (gated
+                       behind GENERATION_MODE=live), GET /api/stats/summary
       db.py         - sqlite3 connection/schema (questions, passages,
                        attempts tables)
       models.py     - Pydantic request/response models
@@ -195,7 +199,9 @@ lsat-prep/
       generation.py - live generate -> independent re-solve -> retry pipeline
       prompts.py    - system prompts (methodology reference, rigor
                        requirements, target-quality example)
-      mock_questions.py - hand-authored static LR questions for GENERATION_MODE=mock
+      mock_questions.py - hand-authored static LR questions for
+                       GENERATION_MODE=mock (42 questions: 3 per each of the
+                       14 official LR types)
       rc_content.py - hand-authored RC passages + questions (same
                        verification method as LR)
     scripts/
@@ -203,10 +209,15 @@ lsat-prep/
       export_prep_txt.py   - regenerates prep.txt from mock_questions.py +
                        rc_content.py (run after authoring any new question)
     tests/          - pytest: test_grading.py, test_stats.py,
-                       test_reading_comp.py (no live API calls)
+                       test_reading_comp.py, test_filtering.py (no live API
+                       calls) — 22 tests
     data/           - sqlite file (gitignored)
   frontend/         - Next.js 16 (App Router, TypeScript), npm-managed
     app/
+      _components/  - colocated non-routable UI (Next 16 private-folder
+                       convention). QuestionCard.tsx holds the shared
+                       question card + grade-result view used by all three
+                       practice pages, plus the Question/GradeResult types.
       layout.tsx    - root layout, fonts (Geist + Press Start 2P + Fredoka), nav bar
       globals.css   - theme tokens (light/dark), wood-panel/block-btn/
                        dashboard component styles
@@ -215,6 +226,10 @@ lsat-prep/
       reading-comp/page.tsx - RC practice page: passage pinned in a
                        clean-card while cycling through its questions in
                        sequence, then a new random passage
+      focus/page.tsx - /focus filtered practice: pick question types and/or
+                       RC content areas (options + counts come from
+                       /api/taxonomy), then cycle the matched set with a
+                       "Question N of M" indicator and an end-of-session score
       progress/page.tsx - /progress dashboard: overall accuracy, accuracy
                        by type, attempts over time
   .gitignore

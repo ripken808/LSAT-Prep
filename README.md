@@ -17,8 +17,8 @@ conventions and `prompt.md` for the detailed session-by-session log.
 > check a box off early to look further along than the project actually is.
 >
 > **Version numbers are scope IDs, not build order.** Actual completion order so
-> far: v0.4 → v0.9 → v0.1 → v0.2 (four done). See the Build order column in
-> `prompt.md`'s Version Plan for the full record and why the numbers were not
+> far: v0.4 → v0.9 → v0.1 → v0.2 → v0.3 (five done). See the Build order column
+> in `prompt.md`'s Version Plan for the full record and why the numbers were not
 > renumbered.
 
 - [x] **v0.1** — Hand-authored, independently-verified Logical Reasoning
@@ -29,8 +29,10 @@ conventions and `prompt.md` for the detailed session-by-session log.
       passages + questions (2 passages to start — law, natural science; more
       content areas backlogged). No Analytical Reasoning — not part of the
       current real LSAT.
-- [ ] **v0.3** — Question metadata tagging + filtered practice mode (pick question
-      types / content areas to practice).
+- [x] **v0.3** — Filtered practice mode: a `/focus` page to pick question types
+      and/or RC content areas and drill only those, backed by `/api/taxonomy`
+      and `/api/questions/filtered`. LR bank expanded to 3 questions per type
+      (42 total) so single-type practice is substantial.
 - [x] **v0.4** — Practice stats dashboard (attempts history + `/progress` page:
       overall accuracy, accuracy by type, attempts over time). No streaks/XP/badges.
 - [ ] **v0.5** — Uniqueness/dedup check via vector DB.
@@ -60,7 +62,8 @@ npm run dev
 ```
 
 Then open `http://localhost:3000` (LR practice), `http://localhost:3000/reading-comp`
-(RC practice), and `http://localhost:3000/progress` (stats dashboard). To use real
+(RC practice), `http://localhost:3000/focus` (drill specific question types), and
+`http://localhost:3000/progress` (stats dashboard). To use real
 Anthropic-API-generated LR questions instead of the hand-authored set, set
 `GENERATION_MODE=live` and a real `ANTHROPIC_API_KEY` in `backend/.env`, then
 re-run the seeding script.

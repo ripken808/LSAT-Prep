@@ -9,59 +9,60 @@
 
 ## Current State (overwrite this section each time — don't append)
 
-- **Current version:** v0.2 (Reading Comprehension) — **complete and
-  re-verified.** Four versions are now done, in this actual order: v0.4 →
-  v0.9 → v0.1 → v0.2 (see the Version Plan's Build order column; the
-  numbers are scope IDs, not sequence).
-- **v0.2 final state:** 2 passages (law, natural_science), 10 RC questions
-  covering 8 of the 10 `rc_*` types, all 10 independently verified by fresh
-  subagents at authoring time. Re-verified from scratch in Session 8 rather
-  than taken on trust: 13/13 pytest green; bank integrity checked in-process
-  (14 LR / 14 unique types, 2 passages, 10 RC / 8 types, every question has a
-  non-empty explanation, all have exactly 5 choices and a valid A-E key);
-  live server smoke test confirmed `GET /api/passage/random` returns the
-  passage + all 5 questions with no `correct_answer`/`explanation` leakage,
-  grading question 39 with all five letters returns the right verdict each
-  time with the explanation always attached, and 12 consecutive draws from
-  the LR endpoint never served an `rc_` question or a row with `passage_id`
-  set; `npx tsc --noEmit` clean and `npm run build` clean (4 routes
-  prerendered — the first production build ever run on this project).
-  `prep.txt` confirmed byte-identical to a fresh regeneration apart from its
-  timestamp line, so it is genuinely in sync with its source files.
-- **Docs-accuracy pass (Session 8, prompted by the user spotting that v0.2's
-  RC page reuses v0.9's CSS — which is only possible if v0.9 was built
-  first):** the Version Plan looked sequential but never was. Added an
-  explicit Build order column recording both write order and completion
-  order per version, plus a header note explaining the drift and why
-  renumbering was rejected (the tags are already on GitHub). Also corrected
-  every `2026-08-10` date in this file to `2026-08-09` — root cause was
-  `prep.txt`'s UTC-generated header being copied in as a local date — fixed
-  the stale Next Up section (it was still chasing the long-finished v0.1
-  tag), and updated `CLAUDE.md`'s stale "no production build has been run"
-  line.
-- **Repo status:** `96dbc78`, `c5b2247`, `6725b0b` (v0.4+v0.9), `7f6cbd3`
-  (v0.1) are pushed to `github.com/ripken808/LSAT-Prep` on `main`. The v0.2 commit
-  (resolve with `git rev-parse v0.2`) was created by amending the earlier
-  local-only WIP commit
-  `ecac82c` rather than stacking on top of it — safe precisely because that
-  WIP commit had never left this machine. Pushed to GitHub with its tag.
-- **Last touched file(s):** `prompt.md`, `README.md`, `CLAUDE.md` (Session 8
-  docs pass). v0.2's code is unchanged from the original WIP commit: `backend/app/db.py`,
-  `main.py`, `models.py`, `rc_content.py` (new),
-  `scripts/generate_question.py`, `scripts/export_prep_txt.py` (new),
-  `tests/test_reading_comp.py` (new), `frontend/app/layout.tsx`,
-  `frontend/app/reading-comp/page.tsx` (new),
-  `.claude/skills/lsat-methodology/SKILL.md`, `prep.txt` (new).
+- **Current version:** v0.3 (filtered practice mode + LR bank expansion) —
+  **complete and verified.** Five versions are now done, in this actual
+  order: v0.4 -> v0.9 -> v0.1 -> v0.2 -> v0.3 (see the Version Plan's Build
+  order column; the numbers are scope IDs, not sequence).
+- **v0.3 final state.** Two halves:
+  1. *Filtering.* `GET /api/taxonomy` returns every question type and content
+     area actually present, with counts, so the UI's options can never drift
+     from the bank. `GET /api/questions/filtered` takes repeated
+     `question_type` / `content_area` params plus an optional `section` and
+     returns the ENTIRE matching set in random order, letting the frontend
+     cycle it without repeats; an empty match is 200 with `total: 0`, not a
+     404. Content area is matched on `COALESCE(q.content_area,
+     p.content_area)` so RC questions inherit their passage's area without a
+     data backfill. New `/focus` page (4th nav tab) drives it. A shared
+     `app/_components/QuestionCard.tsx` was extracted and all three practice
+     pages now use it instead of triplicating the question card.
+  2. *Bank expansion.* LR grew from 14 to **42 questions, 3 per each of the
+     14 official types**, because filtering to one type previously returned a
+     pool of one. Total bank is now 52 (42 LR + 10 RC).
+- **Verification actually performed** (not taken on trust): 31 questions
+  through a blind re-solve (fresh subagent sees no key) — 31/31 agreed — then
+  an adversarial distractor pass on all 31. After editing, 19 questions were
+  re-solved blind a third time; all 19 still agreed. 22/22 pytest green,
+  `tsc --noEmit` and `npm run build` clean, and the `/focus` flow walked
+  end-to-end in a real browser with zero console errors.
+- **Defects the adversarial pass caught and that are now fixed:** a
+  double-key inference item (the exclusive disjunction made a "wrong" answer
+  strictly derivable); a sufficient-assumption stimulus that never
+  established its subject was a technician, so the key was not strictly
+  sufficient; an evaluate-the-argument premise that granted half of its own
+  correct answer ("similarly designed intersections"); a strengthen item
+  whose "irrelevant" distractor actually removed a real confound; a
+  necessary-assumption key made too strong by a stray "throughout the year";
+  and an "a especially" typo that also desynced a choice from its stimulus.
+- **Two bank-level tells found and fixed.** Neither was visible per question;
+  both defeated the non-memorizable requirement:
+  - Answer letter distribution had drifted to B=24/42 (57%). Rebalanced by
+    swapping choice pairs and remapping the explanations' letter references,
+    to A=9 B=8 C=10 D=8 E=7.
+  - **The correct answer was the longest of its five choices in 76% of
+    questions** (random baseline ~20%) — a student could score most of the
+    bank by picking the longest option without reading the stimulus. Reduced
+    to 57%, with the worst margin down from 118 characters to 38, so the
+    residual is mostly 1-2 character noise. This defect predated v0.3 and
+    affected v0.1's original questions too.
+- **Repo status:** v0.1, v0.2, v0.4, v0.9 are pushed and tagged on
+  `github.com/ripken808/LSAT-Prep`. v0.3 is being presented for confirmation
+  now; nothing for it has been committed, tagged, or pushed yet.
 - **Branch:** main
-- **Blockers:** none for v0.2. Open decisions, not blockers:
-  1. What gets built 5th — v0.3 (filtered/cycle-by-type; small, unblocked,
-     and a hard prerequisite for v0.6) vs. expanding RC content vs. scoping
-     v0.6. Recommend v0.3.
-  2. Two real bugs found in Session 8, both logged to Backlog and both
-     pre-existing v0.4 defects rather than v0.2 regressions: orphaned
-     `attempts` rows make `/progress`'s overall total disagree with its
-     by-type breakdown, and "attempts over time" buckets by UTC date.
-  3. Whether to track `.claude/commands/` (`end.md`, `resume.md`).
+- **Blockers:** none. Open decisions: what to build 6th (v0.5 dedup, v0.6
+  timed test — which is now unblocked, since v0.3 supplied the type/area
+  selection it depends on — or the question-quality Backlog items), and
+  whether to spend a session on the "too_easy" distractor rewrites the
+  adversarial pass itemized.
 
 ---
 
@@ -91,7 +92,7 @@
 | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------- |
 | v0.1    | **REVISED 2026-08-09.** Store a hand-authored, independently-verified Logical Reasoning question bank (no live Anthropic API required) covering multiple official LR question types, with answer key + methodology-based explanation per question; serve a random question and grade a user's answer against it. Verification method: fresh subagent re-solves each question with no memory of the marked answer; only keep on match. The original live-API generate/verify pipeline remains in the codebase as an optional future path, not required for this version. No dedup check yet, no UI polish, no filtering, no full-length test. | [x] DONE — 2026-08-09, 14 questions (all 14 official LR types), 11/11 independently verified, random-serve bug fixed | **Written 1st** (Session 1, base app) but **completed 3rd** — tag `v0.1` = `7f6cbd3`, 2026-08-09 19:06. Sat incomplete across Sessions 1-4 while blocked on an API key; finished only once its scope was revised. |
 | v0.2    | **REDUCED STARTER SCOPE 2026-08-09.** Add Reading Comprehension: hand-authored, independently-verified passages + questions (same method as v0.1's revised approach — no live API). New `passages` table + `passage_id` FK; new RC question-type taxonomy (10 types); `GET /api/passage/random` (passage + all its questions); reuses existing grade endpoint. Started at 2 passages (law, natural_science) x 5 questions instead of the originally proposed 4 passages x 5 — deliberately smaller to validate the approach first; more content areas can be added the same way later (see Backlog). No Analytical Reasoning — not part of the current real LSAT (removed Aug 2024). | [x] DONE — 2026-08-09. 2 passages, 10 RC questions, 10/10 independently verified; re-verified in Session 8 (13/13 pytest, live API smoke test, `tsc --noEmit` + `npm run build` clean) | **Written 4th, completed 4th** — tag `v0.2`, 2026-08-09. Built on top of finished v0.4 + v0.9, so it reused their CSS classes rather than adding any. |
-| v0.3    | Question metadata tagging (section, question_type, content_area) + filtered practice mode (select types/content areas to practice)                                                                                                                                     | [ ] not started | Not started. Candidate for **5th** — see Next Up; remaining order is genuinely undecided, not implied by the numbers. |
+| v0.3    | **REVISED 2026-08-10.** Filtered practice mode: `GET /api/taxonomy` (types + content areas with live counts) and `GET /api/questions/filtered` (multi-select by section/type/content area, whole matching set returned in random order), plus a `/focus` page that cycles the filtered set. Metadata tagging — the original half of this version's scope — was already satisfied by v0.1/v0.2 and needed no work. Scope was **extended** to expand the LR bank from 1 to **3 questions per type (42 total, 28 new)**, because filtering to a single type otherwise returned a pool of one. Includes a strengthened two-pass verification protocol and bank-level tell removal. | [x] DONE — 2026-08-10 | **Written 5th, completed 5th.** 42 LR + 10 RC = 52 questions. 31 questions verified by blind re-solve + adversarial distractor pass; 19 re-verified again after editing. |
 | v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [x] DONE — 2026-08-09, visually confirmed via Playwright screenshots | **Written 2nd, completed 1st** — the first version ever finished. Tag `v0.4` = `6725b0b`, 2026-08-09 18:35. Built on top of an *incomplete* v0.1. |
 | v0.5    | Uniqueness/dedup check via vector DB                                                                                                                                                                                                                                   | [ ] not started | Not started, order undecided. |
 | v0.6    | Full-length practice test assembly (real blueprint: 2 LR + 1 RC, correct question counts, timed sections)                                                                                                                                                              | [ ] not started | Not started. **Hard dependency on v0.3** (type/content-area filtering) — cannot be built before it regardless of numbering. |
@@ -110,15 +111,22 @@
       final v0.2 commit, annotated tag `v0.2` created, commit + tag pushed.
 - [x] `.claude/commands/` resolved: user chose NOT to track them. Added
       `.claude/commands/` to `.gitignore` as personal local slash commands.
-- [ ] Decide what gets built 5th — the remaining numbers do NOT imply order
-      (see the Version Plan note). Live options: v0.3 (filtered/cycle-by-type
-      practice — small, unblocked, and a hard prerequisite for v0.6) vs.
-      expanding RC content to social_science/humanities (Backlog) vs. scoping
-      v0.6 (timed full test) now that both LR and RC content exist.
-- [ ] Scope v0.6 (full-length timed test) properly before building — user
-      asked for "a full test prep with a timer." Its stated blueprint (2 LR +
-      1 RC) is now unblocked on content, but it still needs v0.3's filtering/
-      selection to assemble a test by type, so v0.3 should land first.
+- [x] v0.3 chosen and built 5th: filtered practice mode plus the LR bank
+      expansion to 3 questions per type.
+- [ ] Decide what gets built 6th. v0.6 (full-length timed test) is now
+      unblocked — it needed v0.3's type/content-area selection, which exists —
+      and is the user's oldest outstanding request ("a full test prep with a
+      timer"). Alternatives: v0.5 (dedup), expanding RC content to
+      social_science/humanities, or a focused question-quality session.
+- [ ] Scope v0.6 properly before building: section counts and timing per the
+      real blueprint (2 LR sections of 24-26 questions, 1 RC section of 26-28
+      across 4 passages, 35 minutes each). Note the current bank holds 42 LR
+      and 10 RC questions, which is not enough for a full-blueprint test —
+      decide whether v0.6 ships with reduced section sizes or waits on more
+      content.
+- [ ] Consider a question-quality session against the itemized Backlog
+      findings: the "too_easy" distractor rewrites, the residual answer-length
+      tell, and the `MOCK_QUESTIONS[2]` exemplar contamination.
 
 ## Backlog (out-of-scope for current version — don't build yet)
 
@@ -145,28 +153,31 @@
       NOT fixed during v0.2: it predates v0.2, belongs to v0.4's surface, and
       pulling it in would violate the Versioning Strategy. Do it as a small
       standalone fix or fold it into the next version.
-- [ ] **DATA ACCURACY (found Session 8):** all 24 questions carry
-      `verified: True`, but only 21 were ever independently re-solved by a fresh
-      subagent (11 LR in Session 5, 10 RC in Session 6). LR questions 1-3
-      (necessary_assumption, flaw, parallel_reasoning) are the original Session 1
-      mock set — hand-authored with methodology-based explanations, but never
-      subagent-verified. The flag over-claims for those three. Fix: actually
-      re-solve them, then keep the flag; don't just flip it.
-- [ ] **QUALITY (found Session 8):** the verification method confirms the marked
-      answer beats the other four, but cannot detect weak distractors or an
-      over-strong key. Concrete instance: LR question 1's answer (A) — "**no**
-      factor other than the cameras contributed" — does not actually pass the
-      negation test it claims to (negated, another contributing factor still
-      leaves cameras as a substantial cause, so the argument bends rather than
-      collapses); real LSAT necessary-assumption answers are hedged far more
-      weakly. That stimulus also contains an untested classic gap: it reports a
-      drop in *reported* crime and concludes about *crime*. The 21/21 first-pass
-      verification rate is itself a signal that distractors are too easy, since
-      real LSAT items sit at 40-70% human accuracy. Proposed fix: add an
-      adversarial pass that argues the best case for each *wrong* answer, rather
-      than only re-solving. Note the author and verifier are the same model
-      family, so blind spots are correlated — this is re-sampling one prior, not
-      a genuine second opinion.
+- [x] ~~DATA ACCURACY (found Session 8): three questions' `verified` flag
+      over-claimed.~~ **RESOLVED in v0.3** — LR 1-3 were put through the full
+      two-pass protocol along with the 28 new questions.
+- [x] ~~QUALITY (found Session 8): verification cannot detect weak distractors
+      or an over-strong key.~~ **RESOLVED in v0.3** — the adversarial distractor
+      pass now runs on every new question and is documented in the
+      `lsat-methodology` skill. LR question 1's over-strong key was rewritten.
+- [ ] **QUALITY, still open after v0.3:** the adversarial pass rated roughly a
+      third of items "too_easy" (all four distractors dismissible on sight) and
+      supplied concrete per-question rewrite suggestions — see the Session 9 log
+      for the full list. Fixing these means authoring better traps, not more
+      questions. Also still open: the answer-length tell was reduced from 76% to
+      57% of keys being the longest choice, with max margin down from 118 to 38
+      characters; the residual is mostly 1-2 character differences and no longer
+      exploitable, but a full pass would bring it to the ~20% baseline.
+- [ ] **CONTAMINATION (found Session 9):** the parallel_reasoning question at
+      `MOCK_QUESTIONS[2]` is *verbatim* the reference example in
+      `.claude/skills/lsat-methodology/SKILL.md` and in `prompts.py`'s
+      `REFERENCE_EXAMPLE_BLOCK`. Two consequences: it is by definition
+      memorizable, and any verifier that loads the skill sees its marked answer
+      before solving, so re-solving it is not genuinely independent. Fix: author
+      a distinct served question and keep the exemplar teaching-only.
+- [ ] **ADVERSARIAL SWEEP of the 11 remaining v0.1 questions** that were only
+      ever single-pass verified (indices 3, 6, 7, 8, 12 and the rest of the
+      original 14 not covered in Session 9's re-check).
 - [ ] **BUG (minor, same root cause as the log-date confusion):** `answered_at`
       is stored as UTC and `get_attempts_by_day()` groups on `substr(answered_at,
       1, 10)`, so `/progress`'s "attempts over time" buckets by **UTC** date.
@@ -213,6 +224,7 @@
 | 2nd              | v0.9    | 2026-08-09 18:35 | `6725b0b`     | Session 4 entry below          |
 | 3rd              | v0.1    | 2026-08-09 19:06 | `7f6cbd3`     | Session 5 entry below          |
 | 4th              | v0.2    | 2026-08-09       | tag `v0.2`    | Session 6 entry below    |
+| 5th              | v0.3    | 2026-08-10       | tag `v0.3`    | Session 9 entry below    |
 
 Note on ordering: the completion order above is NOT the version-number order
 — see the Version Plan's Build order column for the full explanation. v0.1
@@ -228,6 +240,190 @@ so a prompt does not correspond to the full contents of its tagged commit.
 ## Session Log
 
 > Newest entry at the top. Tag each entry with the version it belongs to.
+
+### [v0.3] Session 9 — 2026-08-10 (filtered practice + LR bank expansion)
+
+**Prompt(s) used:**
+
+```
+lets continue with v0.3
+[plan mode; two scoping decisions made via AskUserQuestion: "mechanism +
+bulk authoring" over mechanism-only, and a new dedicated page over
+extending the existing Practice page]
+```
+
+**What was done:**
+
+- **Found before building** that half of v0.3's stated scope (metadata
+  tagging) was already satisfied by v0.1/v0.2, and that the LR bank held
+  exactly one question per type — so "cycle through flaw questions" would
+  have been a pool of one. Also found `content_area` is NULL on all 24
+  question rows; the area lives only on `passages`. Both facts were put to
+  the user, who chose to expand the bank alongside the mechanism.
+- **Backend:** `get_questions_filtered()` (parameterized `IN` clauses, LEFT
+  JOIN to passages, `COALESCE` on content area) and `get_taxonomy_counts()`
+  in `db.py`; `GET /api/taxonomy` and `GET /api/questions/filtered` in
+  `main.py`, reusing the existing `_row_to_public` so the no-leak guarantee
+  is shared rather than reimplemented; four new Pydantic models;
+  `tests/test_filtering.py` with 9 tests (22 total, all green).
+- **Frontend:** new `app/_components/QuestionCard.tsx` holding the shared
+  question card and grade-result view — `/` and `/reading-comp` were
+  refactored onto it rather than letting `/focus` triplicate the markup.
+  New `app/focus/page.tsx` and a 4th nav tab.
+- **Content:** authored 28 new LR questions to bring all 14 types to 3 each.
+- **Verification, three rounds.** 31 questions (28 new + the 3 originals that
+  had never been independently checked) through a blind re-solve: 31/31
+  agreed. Then an adversarial distractor pass on all 31, which is what found
+  the real defects. After the resulting edits, 19 touched questions were
+  re-solved blind again: 19/19 still agreed.
+- **Defects found and fixed** — see Current State for the full list; the
+  most serious were a double-key inference item, a sufficient-assumption
+  stimulus missing the premise its key depended on, and an
+  evaluate-the-argument premise that granted half its own answer.
+- **Two bank-level tells fixed:** answer-letter skew (B was 57% of keys) and
+  an answer-length tell where the key was the longest choice 76% of the time
+  against a ~20% baseline. The latter predated this version and affected
+  v0.1's questions too.
+- Documented the two-pass protocol and the bank-level tell checklist in
+  `.claude/skills/lsat-methodology/SKILL.md`; updated `CLAUDE.md` structure
+  and routes; regenerated `prep.txt` (52 questions, 1548 lines).
+
+**What broke / what to watch:**
+
+- Two self-inflicted mechanical errors, both caught immediately: a
+  `sed`-style replacement left a dangling string fragment in one stimulus,
+  and a single-quoted literal broke on an apostrophe in "Ridgeline
+  Elementary's". Both are the predictable hazard of scripted edits to a
+  Python source file holding prose — prefer block-scoped, exact-match
+  rewrites and always re-import afterwards.
+- Batched verification (6 agents x ~6 questions) rather than one agent per
+  question as the plan estimated. Key-blindness is preserved, so the check
+  is equally valid, at roughly a fifth of the cost.
+- **Still open, logged to Backlog:** roughly a third of items were rated
+  "too_easy" by the adversarial pass, with concrete per-item rewrite
+  suggestions; the residual length tell; and the fact that
+  `MOCK_QUESTIONS[2]` is verbatim the skill's reference example, which makes
+  it both memorizable and impossible to verify independently.
+
+**Next session should:**
+
+- Decide what gets built 6th. v0.6 (full-length timed test) is now unblocked
+  — v0.3 supplied the type/content-area selection it needs — and is the
+  user's oldest outstanding request.
+- Or spend a focused session on the question-quality Backlog items, which
+  now have specific, itemized fixes rather than vague concerns.
+
+**Reconstruction prompt — v0.3 (filtered practice mode + LR bank expansion):**
+
+```
+Rebuild this project (LSAT Prep) to v0.3's state. This is everything in the
+v0.1 and v0.2 reconstruction prompts, PLUS the following. (v0.4's dashboard
+and v0.9's theme are separate completed versions layered on top in real
+project history; this entry describes v0.3's own logical scope.)
+
+BACKEND - FILTERING:
+- db.py gains get_questions_filtered(conn, section=None, question_types=None,
+  content_areas=None) returning all matching rows ORDER BY RANDOM(). It must
+  LEFT JOIN passages ON questions.passage_id = passages.id and filter content
+  area on COALESCE(q.content_area, p.content_area) - RC questions store NULL
+  for content_area, so without the join a content-area filter returns nothing.
+  Build IN (...) clauses from parameterized placeholders; never interpolate
+  values into SQL.
+- db.py gains get_taxonomy_counts(conn) -> (type_rows, content_area_rows).
+  Group types by (section, question_type). Group content areas by the same
+  COALESCE expression, excluding NULLs, and GROUP BY 1 / ORDER BY 1 by
+  ordinal - a bare `content_area` is ambiguous because both joined tables
+  have a column with that name, and SQLite raises OperationalError.
+- GET /api/taxonomy -> {types: [{section, question_type, count}],
+  content_areas: [{content_area, count}]}. The UI builds its filter controls
+  from this so options cannot drift from the bank's actual contents.
+- GET /api/questions/filtered?section=&question_type=&content_area= ->
+  {total, questions: [...]}. question_type and content_area are repeatable
+  (FastAPI: list[str] | None = Query(None)) for multi-select. Returns the
+  WHOLE matching set at once in random order, so the frontend can cycle it
+  without repeats - a different shape from LR's one-question-per-call draw.
+  A filter combination matching nothing returns 200 with total=0, NOT 404;
+  an empty result is a valid answer the page must render as "no questions
+  match", not an error. Reuse the existing _row_to_public helper so the
+  never-leak-the-key guarantee is shared, not reimplemented.
+- Note /api/questions/... (plural) does not collide with the existing
+  /api/question/{question_id}.
+- tests/test_filtering.py: empty-state taxonomy, taxonomy counts, filter by
+  one type, by several types, by section, by RC content area through the
+  passage join, no-filters-returns-all, unknown type -> empty set with 200,
+  and that filtered results never include correct_answer or explanation.
+
+FRONTEND:
+- app/_components/QuestionCard.tsx (the _folder prefix is Next 16's
+  private-folder convention for colocated non-routable UI). Exports the
+  Question and GradeResult types, LETTERS, formatQuestionType(), a
+  QuestionCard component (stimulus when present, stem, radio choices, all
+  inside .clean-card) and a GradeResultView component (.result-chip plus the
+  explanation in a .clean-card). Presentational only - each page keeps its
+  own state and grading fetch, because the three flows genuinely differ.
+- app/page.tsx and app/reading-comp/page.tsx are refactored onto these
+  components with identical rendered output; do not let the new page
+  triplicate the markup.
+- app/focus/page.tsx: fetches /api/taxonomy on mount, groups types by section,
+  renders checkbox groups with counts inside .wood-panel blocks plus a
+  content-area group, then "Start Session" fetches the filtered set. Cycles
+  one question at a time with a "Question N of M - Type: X" indicator,
+  ending in a "Session complete / N of M correct" panel and a "New Session"
+  button. Empty result renders "No questions match those filters" with a
+  "Change Filters" button. No new CSS - reuse v0.9's existing classes.
+- layout.tsx gains a 4th nav link, "Focus" -> /focus.
+
+CONTENT - LR BANK EXPANSION:
+- Expand mock_questions.py from 14 to 42 questions: exactly 3 for each of the
+  14 official LR types. Without this, filtering to a single type returns a
+  pool of one and the whole feature is pointless.
+- Every question carries a full methodology-based explanation that applies
+  the named method for its type and addresses all five choices.
+
+VERIFICATION PROTOCOL - TWO PASSES (this is the important part):
+1. Independent re-solve: a fresh context sees only stimulus/stem/choices/type,
+   never the key, and solves using the named method. Keep only on match.
+2. Adversarial distractor pass: a second fresh context argues the strongest
+   case FOR each wrong answer, then judges whether any is genuinely defensible
+   (= two correct answers) and whether all four are trivially dismissible
+   (= item too easy).
+Pass 1 alone is not sufficient and will report 100% agreement on a bank that
+still contains double-key items and unusable distractors. Pass 2 is what
+found, in this version: an inference item where an exclusive disjunction made
+a "wrong" answer strictly derivable; a sufficient-assumption stimulus that
+never established its subject belonged to the class its rule quantified over;
+and an evaluate-the-argument premise that granted half of its own key.
+
+BANK-LEVEL TELLS - MEASURE THESE, THEY ARE INVISIBLE PER QUESTION:
+- Answer-letter distribution must be roughly uniform. This bank reached
+  B = 24/42 (57%) before rebalancing to A=9 B=8 C=10 D=8 E=7. Rebalance by
+  swapping two choices and swapping the corresponding "(X)"/"(Y)" references
+  inside the explanation - a swap keeps the other three letters stable, and
+  scoping the regex to parenthesized letters leaves bare logic variables
+  ("let A = artifacts") untouched.
+- The correct answer must not systematically be the longest choice. Baseline
+  is ~20%; this bank measured 76%, meaning a student could score most of it
+  by picking the longest option without reading the stimulus. Fix by trimming
+  over-elaborated keys and padding thin distractors.
+- Per-type answer architecture must vary. All three necessary-assumption keys
+  were once the only hedged choice while the trap was the only absolute one,
+  so "pick the hedged one" scored 3/3 without any negation test.
+
+DOCS: record the two-pass protocol and the tell checklist in
+.claude/skills/lsat-methodology/SKILL.md. Regenerate prep.txt.
+
+NOT YET IMPLEMENTED as of v0.3: dedup/uniqueness via vector DB (v0.5);
+full-length timed test assembly (v0.6 - now unblocked, since v0.3 supplies
+the type/content-area selection it needs); scaled scoring (v0.7); deployment
+(v0.8). RC content is still only 2 passages (law, natural_science) and 8 of
+10 rc_ types. The live Anthropic generate/verify pipeline still exists and
+has still never been run. Known open quality debt: about a third of items
+have distractors rated too easy, a residual answer-length tell, and
+MOCK_QUESTIONS[2] is verbatim the methodology skill's reference example,
+which makes it memorizable and impossible to verify independently.
+```
+
+---
 
 ### [v0.2 + docs] Session 8 — 2026-08-09 (build-order audit, date fixes, v0.2 finalized)
 

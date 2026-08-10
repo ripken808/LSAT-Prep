@@ -194,3 +194,42 @@ structure, so (A) is correct.
 - `backend/app/rc_content.py` — hand-authored RC passages + questions (same
   verification method as LR: fresh subagent, no memory of the marked
   answer, independently re-solves before a question is kept).
+
+## Verification protocol — TWO passes, not one (added v0.3)
+
+A single independent re-solve is necessary but **not sufficient**. It confirms
+the marked answer beats the other four; it cannot detect that the other four
+were never serious contenders, nor that the key is subtly over-strong. Both
+failure modes were found in the bank at v0.3 and had survived v0.1's
+single-pass check. Every newly authored question therefore gets:
+
+1. **Independent re-solve.** A fresh subagent sees only stimulus, stem,
+   choices and question type — never the key — and solves using the named
+   method for that type. Keep only on match.
+2. **Adversarial distractor pass.** A second fresh subagent argues the
+   strongest good-faith case *for each wrong answer*, then judges (a) whether
+   any is genuinely defensible — which would mean two correct answers — and
+   (b) whether all four are trivially dismissible, which means the item is too
+   easy. Revise on either finding.
+
+Pass 2 is what catches real defects. In v0.3 it found a double-key inference
+item (an exclusive disjunction made a "wrong" answer strictly derivable), a
+sufficient-assumption stimulus that never established its subject was a
+technician, and a premise that granted half of its own correct answer.
+
+### Bank-level tells to check after any authoring batch
+
+Individually sound questions can still be collectively gameable, which defeats
+the non-memorizable requirement in `CLAUDE.md`. After adding questions, measure:
+
+- **Answer-letter distribution.** Should be roughly uniform. At v0.3 the bank
+  briefly sat at B=24/42 (57%) before rebalancing.
+- **Answer-length tell.** The correct answer should not systematically be the
+  longest choice; the random baseline is ~20%. At v0.3 it was **76%** — a
+  student could score most of the bank by picking the longest option without
+  reading the stimulus. Fix by trimming over-elaborated keys and padding thin
+  distractors, not by adding new questions.
+- **Per-type answer architecture.** Don't let one type's key always share a
+  surface form. All three necessary-assumption keys were once the only hedged
+  choice ("not entirely", "at least in part") while the trap was the only
+  absolute one, so "pick the hedged one" scored 3/3 without any negation test.

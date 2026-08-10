@@ -1,19 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  GradeResult,
+  GradeResultView,
+  Question,
+  QuestionCard,
+  formatQuestionType,
+} from "../_components/QuestionCard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-type Question = {
-  id: number;
-  section: string;
-  question_type: string;
-  content_area: string | null;
-  passage_id: number | null;
-  stimulus: string | null;
-  question_stem: string;
-  choices: string[];
-};
 
 type Passage = {
   id: number;
@@ -26,22 +22,6 @@ type PassageWithQuestions = {
   passage: Passage;
   questions: Question[];
 };
-
-type GradeResult = {
-  correct: boolean;
-  correct_answer: string;
-  explanation: string;
-};
-
-const LETTERS = ["A", "B", "C", "D", "E"];
-
-function formatQuestionType(type: string): string {
-  return type
-    .replace(/^rc_/, "")
-    .split("_")
-    .map((word) => word[0].toUpperCase() + word.slice(1))
-    .join(" ");
-}
 
 export default function ReadingCompPage() {
   const [data, setData] = useState<PassageWithQuestions | null>(null);
@@ -133,24 +113,12 @@ export default function ReadingCompPage() {
               Question {index + 1} of {data.questions.length} &middot; Type: {formatQuestionType(question.question_type)}
             </p>
 
-            <div className="clean-card">
-              <p style={{ marginBottom: 16 }}><strong>{question.question_stem}</strong></p>
-              <form>
-                {question.choices.map((choice, i) => (
-                  <label key={i} style={{ display: "block", margin: "10px 0" }}>
-                    <input
-                      type="radio"
-                      name="choice"
-                      value={LETTERS[i]}
-                      checked={selected === LETTERS[i]}
-                      onChange={() => setSelected(LETTERS[i])}
-                      disabled={!!result}
-                    />
-                    {" "}({LETTERS[i]}) {choice}
-                  </label>
-                ))}
-              </form>
-            </div>
+            <QuestionCard
+              question={question}
+              selected={selected}
+              onSelect={setSelected}
+              locked={!!result}
+            />
 
             {!result && (
               <button
@@ -165,15 +133,7 @@ export default function ReadingCompPage() {
 
             {result && (
               <div style={{ marginTop: 20 }}>
-                <div
-                  className={`result-chip ${result.correct ? "result-chip-correct" : "result-chip-incorrect"}`}
-                >
-                  {result.correct ? "Correct!" : "Incorrect."} Correct answer: {result.correct_answer}
-                </div>
-
-                <div className="clean-card" style={{ marginBottom: 16 }}>
-                  <p>{result.explanation}</p>
-                </div>
+                <GradeResultView result={result} />
 
                 {isLastQuestion ? (
                   <button className="block-btn block-btn-secondary" onClick={loadNewPassage}>

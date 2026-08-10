@@ -26,6 +26,27 @@ class PassageWithQuestions(BaseModel):
     questions: list[QuestionPublic]
 
 
+class TypeCount(BaseModel):
+    section: str
+    question_type: str
+    count: int
+
+
+class ContentAreaCount(BaseModel):
+    content_area: str
+    count: int
+
+
+class Taxonomy(BaseModel):
+    types: list[TypeCount]
+    content_areas: list[ContentAreaCount]
+
+
+class FilteredQuestions(BaseModel):
+    total: int
+    questions: list[QuestionPublic]
+
+
 class GradeRequest(BaseModel):
     selected_answer: str
 

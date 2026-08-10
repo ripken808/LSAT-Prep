@@ -90,6 +90,78 @@ def get_random_question(conn: sqlite3.Connection) -> sqlite3.Row | None:
     ).fetchone()
 
 
+def get_questions_filtered(
+    conn: sqlite3.Connection,
+    section: str | None = None,
+    question_types: list[str] | None = None,
+    content_areas: list[str] | None = None,
+) -> list[sqlite3.Row]:
+    """All questions matching the given filters, in random order.
+
+    Content area is matched on COALESCE(q.content_area, p.content_area): RC
+    questions carry no area of their own, so they inherit their passage's.
+    Only placeholders are interpolated into the SQL below - every filter value
+    stays a bound parameter.
+    """
+    clauses: list[str] = []
+    params: list[str] = []
+
+    if section:
+        clauses.append("q.section = ?")
+        params.append(section)
+    if question_types:
+        clauses.append(
+            f"q.question_type IN ({', '.join('?' for _ in question_types)})"
+        )
+        params.extend(question_types)
+    if content_areas:
+        clauses.append(
+            "COALESCE(q.content_area, p.content_area) IN "
+            f"({', '.join('?' for _ in content_areas)})"
+        )
+        params.extend(content_areas)
+
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    return conn.execute(
+        f"""
+        SELECT q.* FROM questions q
+        LEFT JOIN passages p ON q.passage_id = p.id
+        {where}
+        ORDER BY RANDOM()
+        """,
+        params,
+    ).fetchall()
+
+
+def get_taxonomy_counts(
+    conn: sqlite3.Connection,
+) -> tuple[list[sqlite3.Row], list[sqlite3.Row]]:
+    """(types, content_areas) with counts — drives the filter UI's options so
+    they can never drift from what's actually in the bank."""
+    type_rows = conn.execute(
+        """
+        SELECT section, question_type, COUNT(*) AS count
+        FROM questions
+        GROUP BY section, question_type
+        ORDER BY section, question_type
+        """
+    ).fetchall()
+    content_area_rows = conn.execute(
+        """
+        SELECT COALESCE(q.content_area, p.content_area) AS content_area,
+               COUNT(*) AS count
+        FROM questions q
+        LEFT JOIN passages p ON q.passage_id = p.id
+        WHERE COALESCE(q.content_area, p.content_area) IS NOT NULL
+        -- group/order by ordinal: bare `content_area` is ambiguous here, since
+        -- both questions and passages have a column by that name
+        GROUP BY 1
+        ORDER BY 1
+        """
+    ).fetchall()
+    return type_rows, content_area_rows
+
+
 def get_question_by_id(conn: sqlite3.Connection, question_id: int) -> sqlite3.Row | None:
     return conn.execute(
         "SELECT * FROM questions WHERE id = ?", (question_id,)

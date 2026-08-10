@@ -1,6 +1,6 @@
 import json
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import GENERATION_MODE
@@ -10,16 +10,20 @@ from app.db import (
     get_overall_stats,
     get_question_by_id,
     get_questions_by_passage_id,
+    get_questions_filtered,
     get_random_passage,
     get_random_question,
     get_stats_by_type,
+    get_taxonomy_counts,
     insert_attempt,
     insert_question,
 )
 from app.generation import GenerationError, generate_and_verify
 from app.models import (
     VALID_ANSWERS,
+    ContentAreaCount,
     DayStats,
+    FilteredQuestions,
     GradeRequest,
     GradeResponse,
     OverallStats,
@@ -27,6 +31,8 @@ from app.models import (
     PassageWithQuestions,
     QuestionPublic,
     StatsSummary,
+    Taxonomy,
+    TypeCount,
     TypeStats,
 )
 
@@ -87,6 +93,55 @@ def get_random_passage_with_questions():
         ),
         questions=[_row_to_public(row) for row in question_rows],
     )
+
+
+@app.get("/api/taxonomy", response_model=Taxonomy)
+def get_taxonomy():
+    """Question types and content areas actually present in the bank, with
+    counts. The /focus page builds its filter controls from this rather than a
+    hardcoded list, so the options can't drift as content is added."""
+    with get_connection() as conn:
+        type_rows, area_rows = get_taxonomy_counts(conn)
+
+    return Taxonomy(
+        types=[
+            TypeCount(
+                section=row["section"],
+                question_type=row["question_type"],
+                count=row["count"],
+            )
+            for row in type_rows
+        ],
+        content_areas=[
+            ContentAreaCount(content_area=row["content_area"], count=row["count"])
+            for row in area_rows
+        ],
+    )
+
+
+@app.get("/api/questions/filtered", response_model=FilteredQuestions)
+def get_filtered_questions(
+    section: str | None = Query(None),
+    question_type: list[str] | None = Query(None),
+    content_area: list[str] | None = Query(None),
+):
+    """Filtered practice: returns the ENTIRE matching set at once, in random
+    order, so the frontend can cycle through it without repeats — the same
+    shape as the RC flow, rather than LR's one-random-question-per-call draw.
+
+    A filter combination that matches nothing is a valid answer, not an error:
+    this returns 200 with total=0 so the page can say "no questions match"
+    instead of surfacing a failure."""
+    with get_connection() as conn:
+        rows = get_questions_filtered(
+            conn,
+            section=section,
+            question_types=question_type,
+            content_areas=content_area,
+        )
+
+    questions = [_row_to_public(row) for row in rows]
+    return FilteredQuestions(total=len(questions), questions=questions)
 
 
 @app.post("/api/question/{question_id}/grade", response_model=GradeResponse)

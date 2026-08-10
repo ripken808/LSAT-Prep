@@ -44,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <nav className="app-nav">
           <Link href="/" className="app-nav-link">Practice</Link>
           <Link href="/reading-comp" className="app-nav-link">Reading Comp</Link>
+          <Link href="/focus" className="app-nav-link">Focus</Link>
           <Link href="/progress" className="app-nav-link">Progress</Link>
         </nav>
         {children}
