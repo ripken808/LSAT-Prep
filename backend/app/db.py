@@ -7,18 +7,28 @@ from typing import Iterator
 from app.config import DB_PATH
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS passages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content_area TEXT NOT NULL,
+    title TEXT,
+    passage_text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS questions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     section TEXT NOT NULL,
     question_type TEXT NOT NULL,
     content_area TEXT,
-    stimulus TEXT NOT NULL,
+    passage_id INTEGER,
+    stimulus TEXT,
     question_stem TEXT NOT NULL,
     choices TEXT NOT NULL,
     correct_answer TEXT NOT NULL,
     explanation TEXT NOT NULL,
     verified INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (passage_id) REFERENCES passages(id)
 );
 
 CREATE TABLE IF NOT EXISTS attempts (
@@ -51,15 +61,17 @@ def insert_question(conn: sqlite3.Connection, question: dict) -> int:
     cursor = conn.execute(
         """
         INSERT INTO questions
-            (section, question_type, content_area, stimulus, question_stem,
-             choices, correct_answer, explanation, verified, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (section, question_type, content_area, passage_id, stimulus,
+             question_stem, choices, correct_answer, explanation, verified,
+             created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             question["section"],
             question["question_type"],
             question.get("content_area"),
-            question["stimulus"],
+            question.get("passage_id"),
+            question.get("stimulus"),
             question["question_stem"],
             json.dumps(question["choices"]),
             question["correct_answer"],
@@ -72,8 +84,9 @@ def insert_question(conn: sqlite3.Connection, question: dict) -> int:
 
 
 def get_random_question(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    """Random LR question (no attached passage) — used by the LR practice flow."""
     return conn.execute(
-        "SELECT * FROM questions ORDER BY RANDOM() LIMIT 1"
+        "SELECT * FROM questions WHERE passage_id IS NULL ORDER BY RANDOM() LIMIT 1"
     ).fetchone()
 
 
@@ -81,6 +94,37 @@ def get_question_by_id(conn: sqlite3.Connection, question_id: int) -> sqlite3.Ro
     return conn.execute(
         "SELECT * FROM questions WHERE id = ?", (question_id,)
     ).fetchone()
+
+
+def insert_passage(conn: sqlite3.Connection, passage: dict) -> int:
+    cursor = conn.execute(
+        """
+        INSERT INTO passages (content_area, title, passage_text, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            passage["content_area"],
+            passage.get("title"),
+            passage["passage_text"],
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
+    return cursor.lastrowid
+
+
+def get_random_passage(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM passages ORDER BY RANDOM() LIMIT 1"
+    ).fetchone()
+
+
+def get_questions_by_passage_id(
+    conn: sqlite3.Connection, passage_id: int
+) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM questions WHERE passage_id = ? ORDER BY id",
+        (passage_id,),
+    ).fetchall()
 
 
 def insert_attempt(

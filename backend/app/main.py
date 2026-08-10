@@ -9,6 +9,8 @@ from app.db import (
     get_connection,
     get_overall_stats,
     get_question_by_id,
+    get_questions_by_passage_id,
+    get_random_passage,
     get_random_question,
     get_stats_by_type,
     insert_attempt,
@@ -21,6 +23,8 @@ from app.models import (
     GradeRequest,
     GradeResponse,
     OverallStats,
+    PassagePublic,
+    PassageWithQuestions,
     QuestionPublic,
     StatsSummary,
     TypeStats,
@@ -42,6 +46,7 @@ def _row_to_public(row) -> QuestionPublic:
         section=row["section"],
         question_type=row["question_type"],
         content_area=row["content_area"],
+        passage_id=row["passage_id"],
         stimulus=row["stimulus"],
         question_stem=row["question_stem"],
         choices=json.loads(row["choices"]),
@@ -58,6 +63,30 @@ def get_current_question():
     if row is None:
         raise HTTPException(status_code=404, detail="No question has been generated yet")
     return _row_to_public(row)
+
+
+@app.get("/api/passage/random", response_model=PassageWithQuestions)
+def get_random_passage_with_questions():
+    """Reading Comprehension flow: a passage is read once, then its
+    questions are answered in sequence — unlike LR's per-question random
+    draw, this returns one random passage plus ALL of its questions
+    together so the frontend can keep the passage pinned while cycling
+    through them."""
+    with get_connection() as conn:
+        passage_row = get_random_passage(conn)
+        if passage_row is None:
+            raise HTTPException(status_code=404, detail="No passages have been added yet")
+        question_rows = get_questions_by_passage_id(conn, passage_row["id"])
+
+    return PassageWithQuestions(
+        passage=PassagePublic(
+            id=passage_row["id"],
+            content_area=passage_row["content_area"],
+            title=passage_row["title"],
+            passage_text=passage_row["passage_text"],
+        ),
+        questions=[_row_to_public(row) for row in question_rows],
+    )
 
 
 @app.post("/api/question/{question_id}/grade", response_model=GradeResponse)

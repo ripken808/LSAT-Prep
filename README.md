@@ -15,13 +15,20 @@ conventions and `prompt.md` for the detailed session-by-session log.
 > for its stated scope — not partially working. Update this alongside `prompt.md`
 > (Version Plan table + Session Log) and the required reconstruction prompt. Don't
 > check a box off early to look further along than the project actually is.
+>
+> **Version numbers are scope IDs, not build order.** Actual completion order so
+> far: v0.4 → v0.9 → v0.1 → v0.2 (four done). See the Build order column in
+> `prompt.md`'s Version Plan for the full record and why the numbers were not
+> renumbered.
 
 - [x] **v0.1** — Hand-authored, independently-verified Logical Reasoning
       question bank (14 questions, all 14 official LR types) + verified answer
       key + methodology-based explanation, serve a random question and grade
       a user's answer. No live Anthropic API required (revised scope).
-- [ ] **v0.2** — Add Reading Comprehension generation (no Analytical Reasoning —
-      not part of the current real LSAT).
+- [x] **v0.2** — Reading Comprehension: hand-authored, independently-verified
+      passages + questions (2 passages to start — law, natural science; more
+      content areas backlogged). No Analytical Reasoning — not part of the
+      current real LSAT.
 - [ ] **v0.3** — Question metadata tagging + filtered practice mode (pick question
       types / content areas to practice).
 - [x] **v0.4** — Practice stats dashboard (attempts history + `/progress` page:
@@ -52,10 +59,15 @@ npm install
 npm run dev
 ```
 
-Then open `http://localhost:3000` (practice) and `http://localhost:3000/progress`
-(stats dashboard). To use real Anthropic-API-generated questions instead of the
-hand-authored mock set, set `GENERATION_MODE=live` and a real `ANTHROPIC_API_KEY`
-in `backend/.env`, then re-run the seeding script.
+Then open `http://localhost:3000` (LR practice), `http://localhost:3000/reading-comp`
+(RC practice), and `http://localhost:3000/progress` (stats dashboard). To use real
+Anthropic-API-generated LR questions instead of the hand-authored set, set
+`GENERATION_MODE=live` and a real `ANTHROPIC_API_KEY` in `backend/.env`, then
+re-run the seeding script.
+
+The full question bank (LR + RC, with answers and explanations) is also available
+as plain text in `prep.txt` at the repo root — regenerate it with
+`uv run python scripts/export_prep_txt.py` after adding any new question.
 
 See `CLAUDE.md` → Commands for the full command reference (tests, etc.).
 

@@ -8,9 +8,22 @@ class QuestionPublic(BaseModel):
     section: str
     question_type: str
     content_area: str | None
-    stimulus: str
+    passage_id: int | None
+    stimulus: str | None  # null for RC questions - text lives on the passage
     question_stem: str
     choices: list[str]
+
+
+class PassagePublic(BaseModel):
+    id: int
+    content_area: str
+    title: str | None
+    passage_text: str
+
+
+class PassageWithQuestions(BaseModel):
+    passage: PassagePublic
+    questions: list[QuestionPublic]
 
 
 class GradeRequest(BaseModel):

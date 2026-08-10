@@ -60,6 +60,44 @@ methodology here, update `backend/app/prompts.py` to match, and vice versa.
   sub-conclusion, main conclusion, counter-consideration, background), and
   justify why other roles don't fit.
 
+## Named method per Reading Comprehension question type
+
+RC questions are answered against a shared passage (`backend/app/rc_content.py`
+→ `PASSAGES`, referenced by `passage_id` on `RC_QUESTIONS`), not a standalone
+stimulus. Question types are prefixed `rc_` to keep them fully distinct from
+LR types in the schema/stats (a passage can otherwise produce a "main_point"
+question that isn't the same skill as an LR "main_point" question).
+
+- **rc_main_point** — Identify the passage's primary purpose/thesis — what
+  all paragraphs collectively build toward — not a sub-point developed in
+  only one paragraph.
+- **rc_specific_detail** — Correct answer must be explicitly stated in the
+  passage (a direct textual lookup), not inferred. Incorrect answers either
+  aren't stated or contradict the text.
+- **rc_inference** — Must follow by logical entailment from stated passage
+  content, no outside assumptions — same bar as LR inference, grounded in
+  the passage.
+- **rc_author_attitude** — Identify the author's attitude/tone toward a
+  specific subject, based on evaluative word choice, not neutral factual
+  content.
+- **rc_passage_organization** — Describe the passage's abstract structural
+  pattern (e.g. "presents a traditional view, then a critique, then an
+  alternative"), not its content.
+- **rc_analogous_situation** — Identify a new scenario sharing the same
+  underlying structure/principle as something in the passage — parallels LR
+  parallel_reasoning, applied to passage content.
+- **rc_application** — Apply a principle/finding from the passage to a new
+  context not explicitly discussed, extrapolating consistently with the text.
+- **rc_strengthen_weaken** — Identify what would strengthen/weaken a specific
+  claim or argument made within the passage (not the passage's overall main
+  point).
+- **rc_purpose_of_reference** — Identify why the author included a specific
+  detail/example — its rhetorical function in the surrounding argument (e.g.
+  "to illustrate," "to contrast," "to provide evidence for").
+- **rc_meaning_in_context** — Determine what a word/phrase means as
+  constrained by its surrounding sentences in the passage, not its
+  dictionary definition in isolation.
+
 ## Explanation rigor requirements (apply to every type)
 
 1. Use consistent formal notation wherever the method calls for it — `P -> Q`
@@ -153,3 +191,6 @@ structure, so (A) is correct.
 - `backend/app/generation.py` — `generate_and_verify()` uses both prompts for
   the live generate → independent re-solve → retry-on-mismatch pipeline
   (only runs when `GENERATION_MODE=live`).
+- `backend/app/rc_content.py` — hand-authored RC passages + questions (same
+  verification method as LR: fresh subagent, no memory of the marked
+  answer, independently re-solves before a question is kept).

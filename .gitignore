@@ -16,3 +16,6 @@ frontend/.env*
 # OS / editor
 .DS_Store
 .vscode/
+
+# Personal Claude Code slash commands (local workflow, not project config)
+.claude/commands/

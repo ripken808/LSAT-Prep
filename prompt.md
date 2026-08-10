@@ -9,40 +9,59 @@
 
 ## Current State (overwrite this section each time — don't append)
 
-- **Current version:** v0.1 — scope revised, now complete (see below).
-  v0.4 and v0.9 are also complete, committed, tagged, and pushed.
-- **v0.1 — REVISED SCOPE, now done.** User redirected v0.1 away from live
-  Anthropic API generation to a hand-authored, independently-verified
-  question bank (see Key Decisions Log). `backend/app/mock_questions.py` now
-  holds 14 original LR questions — one per official LR question type — each
-  independently re-solved by a fresh subagent (no memory of the marked
-  answer) before being kept; 11/11 new ones matched on the first pass, zero
-  revisions needed. `GET /api/question/current` was fixed to serve a random
-  question from the full bank on every call (previously always returned the
-  single most-recently-inserted row, which meant it appeared to "repeat" once
-  more than one question existed — user caught this in testing). The
-  original live-API pipeline (`generation.py`, `prompts.py`,
-  `GENERATION_MODE=live`) remains in the codebase untouched, as an optional
-  future path — not required for v0.1 to be done.
-- **v0.4 and v0.9 — complete and pushed.** Visually confirmed via Playwright
-  screenshots in Session 4, then committed (`6725b0b`), annotated-tagged
-  (`v0.4`, `v0.9`), and pushed to GitHub after user confirmation.
-- **Repo status:** `96dbc78` (checkpoint), `c5b2247` (docs sync), and
-  `6725b0b` (v0.4+v0.9 done, tagged) are all pushed to
-  `github.com/ripken808/LSAT-Prep` on `main`. This session's v0.1 work
-  (11 new questions, random-selection fix, docs) is local-only, pending the
-  Finishing a Version checklist (present → confirm → commit → tag → push).
-- **Last touched file(s):** `backend/app/mock_questions.py` (11 new
-  questions), `backend/app/db.py` (`get_random_question` replacing
-  `get_latest_question`), `backend/app/main.py` (route now serves random),
-  `prompt.md`, `README.md`.
+- **Current version:** v0.2 (Reading Comprehension) — **complete and
+  re-verified.** Four versions are now done, in this actual order: v0.4 →
+  v0.9 → v0.1 → v0.2 (see the Version Plan's Build order column; the
+  numbers are scope IDs, not sequence).
+- **v0.2 final state:** 2 passages (law, natural_science), 10 RC questions
+  covering 8 of the 10 `rc_*` types, all 10 independently verified by fresh
+  subagents at authoring time. Re-verified from scratch in Session 8 rather
+  than taken on trust: 13/13 pytest green; bank integrity checked in-process
+  (14 LR / 14 unique types, 2 passages, 10 RC / 8 types, every question has a
+  non-empty explanation, all have exactly 5 choices and a valid A-E key);
+  live server smoke test confirmed `GET /api/passage/random` returns the
+  passage + all 5 questions with no `correct_answer`/`explanation` leakage,
+  grading question 39 with all five letters returns the right verdict each
+  time with the explanation always attached, and 12 consecutive draws from
+  the LR endpoint never served an `rc_` question or a row with `passage_id`
+  set; `npx tsc --noEmit` clean and `npm run build` clean (4 routes
+  prerendered — the first production build ever run on this project).
+  `prep.txt` confirmed byte-identical to a fresh regeneration apart from its
+  timestamp line, so it is genuinely in sync with its source files.
+- **Docs-accuracy pass (Session 8, prompted by the user spotting that v0.2's
+  RC page reuses v0.9's CSS — which is only possible if v0.9 was built
+  first):** the Version Plan looked sequential but never was. Added an
+  explicit Build order column recording both write order and completion
+  order per version, plus a header note explaining the drift and why
+  renumbering was rejected (the tags are already on GitHub). Also corrected
+  every `2026-08-10` date in this file to `2026-08-09` — root cause was
+  `prep.txt`'s UTC-generated header being copied in as a local date — fixed
+  the stale Next Up section (it was still chasing the long-finished v0.1
+  tag), and updated `CLAUDE.md`'s stale "no production build has been run"
+  line.
+- **Repo status:** `96dbc78`, `c5b2247`, `6725b0b` (v0.4+v0.9), `7f6cbd3`
+  (v0.1) are pushed to `github.com/ripken808/LSAT-Prep` on `main`. The v0.2 commit
+  (resolve with `git rev-parse v0.2`) was created by amending the earlier
+  local-only WIP commit
+  `ecac82c` rather than stacking on top of it — safe precisely because that
+  WIP commit had never left this machine. Pushed to GitHub with its tag.
+- **Last touched file(s):** `prompt.md`, `README.md`, `CLAUDE.md` (Session 8
+  docs pass). v0.2's code is unchanged from the original WIP commit: `backend/app/db.py`,
+  `main.py`, `models.py`, `rc_content.py` (new),
+  `scripts/generate_question.py`, `scripts/export_prep_txt.py` (new),
+  `tests/test_reading_comp.py` (new), `frontend/app/layout.tsx`,
+  `frontend/app/reading-comp/page.tsx` (new),
+  `.claude/skills/lsat-methodology/SKILL.md`, `prep.txt` (new).
 - **Branch:** main
-- **Blockers:** none for v0.1 itself. User has also asked for: (1) an
-  explicit shuffle-through-all-types control, (2) cycle-through-a-specific-
-  type practice, (3) a full timed test. (2) is v0.3's exact scope; (3) is
-  v0.6's scope and has a hard dependency on v0.2 (Reading Comprehension,
-  not started) for a real-blueprint test — flagged to the user, plan
-  pending their direction (see chat).
+- **Blockers:** none for v0.2. Open decisions, not blockers:
+  1. What gets built 5th — v0.3 (filtered/cycle-by-type; small, unblocked,
+     and a hard prerequisite for v0.6) vs. expanding RC content vs. scoping
+     v0.6. Recommend v0.3.
+  2. Two real bugs found in Session 8, both logged to Backlog and both
+     pre-existing v0.4 defects rather than v0.2 regressions: orphaned
+     `attempts` rows make `/progress`'s overall total disagree with its
+     by-type breakdown, and "attempts over time" buckets by UTC date.
+  3. Whether to track `.claude/commands/` (`end.md`, `resume.md`).
 
 ---
 
@@ -51,32 +70,55 @@
 > Small, explicitly-scoped versions — see Versioning Strategy in CLAUDE.md. Don't
 > start a version until its scope is written here. Mark complete only when it works
 > end-to-end for its stated scope.
+>
+> **Version numbers are stable scope IDs, NOT build order.** They have never
+> matched the order things were actually built, and the "Build order" column below
+> is the honest record. Two things caused the drift: (1) v0.4 and v0.9 were built
+> and completed ahead of v0.1 by explicit user authorization, because v0.1 was
+> blocked waiting on an `ANTHROPIC_API_KEY` and they were unblocked, independent
+> work; (2) v0.1 then completed only after its scope was *revised* to drop the
+> live-API requirement, not after the blocker cleared. The numbers are deliberately
+> NOT being renumbered to match: `v0.1`/`v0.4`/`v0.9` are annotated tags already
+> pushed to GitHub, and every reconstruction prompt cross-references these numbers,
+> so renumbering would invalidate published history to fix a cosmetic problem.
+>
+> Practical consequence to keep in mind when reading the reconstruction prompts:
+> v0.2's RC page reuses v0.9's `.clean-card` / `.block-btn` / `.result-chip`
+> classes and needed no new CSS — because v0.9 was already finished and tagged
+> before v0.2 was started. A lower version number does not mean "built on less."
 
-| Version | Scope                                                                                                                                                                                                                                                                  | Status          |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| v0.1    | **REVISED 2026-08-10.** Store a hand-authored, independently-verified Logical Reasoning question bank (no live Anthropic API required) covering multiple official LR question types, with answer key + methodology-based explanation per question; serve a random question and grade a user's answer against it. Verification method: fresh subagent re-solves each question with no memory of the marked answer; only keep on match. The original live-API generate/verify pipeline remains in the codebase as an optional future path, not required for this version. No dedup check yet, no UI polish, no filtering, no full-length test. | [x] DONE — 2026-08-10, 14 questions (all 14 official LR types), 11/11 independently verified, random-serve bug fixed |
-| v0.2    | Add Reading Comprehension generation (passage + questions). No Analytical Reasoning — it's not part of the current real LSAT (removed Aug 2024).                                                                                                                       | [ ] not started |
-| v0.3    | Question metadata tagging (section, question_type, content_area) + filtered practice mode (select types/content areas to practice)                                                                                                                                     | [ ] not started |
-| v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [x] DONE — 2026-08-10, visually confirmed via Playwright screenshots |
-| v0.5    | Uniqueness/dedup check via vector DB                                                                                                                                                                                                                                   | [ ] not started |
-| v0.6    | Full-length practice test assembly (real blueprint: 2 LR + 1 RC, correct question counts, timed sections)                                                                                                                                                              | [ ] not started |
-| v0.7    | Scaled score conversion (120-180)                                                                                                                                                                                                                                      | [ ] not started |
-| v0.8    | Deploy so friend can access it online                                                                                                                                                                                                                                  | [ ] not started |
-| v0.9    | Growtopia-inspired visual theme (cosmetic/CSS-only — no grading/generation/data-model changes). Original pixel-chunky UI: wood-panel borders/textures, beveled 3D block buttons, bright saturated palette, applied to nav, buttons, general chrome, and the themed `/progress` dashboard. Press Start 2P reserved for headings/large stat numbers only; a legible rounded sans font for nav links, button labels, and badge text. The question-reading screen (stimulus/stem/choices) stays clean, high-contrast, unstyled by the pixel theme. | [x] DONE — 2026-08-10, visually confirmed via Playwright screenshots |
-| v0.x    | [add more as scope becomes clearer]                                                                                                                                                                                                                                    | [ ] not started |
+| Version | Scope                                                                                                                                                                                                                                                                  | Status          | Build order |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------- |
+| v0.1    | **REVISED 2026-08-09.** Store a hand-authored, independently-verified Logical Reasoning question bank (no live Anthropic API required) covering multiple official LR question types, with answer key + methodology-based explanation per question; serve a random question and grade a user's answer against it. Verification method: fresh subagent re-solves each question with no memory of the marked answer; only keep on match. The original live-API generate/verify pipeline remains in the codebase as an optional future path, not required for this version. No dedup check yet, no UI polish, no filtering, no full-length test. | [x] DONE — 2026-08-09, 14 questions (all 14 official LR types), 11/11 independently verified, random-serve bug fixed | **Written 1st** (Session 1, base app) but **completed 3rd** — tag `v0.1` = `7f6cbd3`, 2026-08-09 19:06. Sat incomplete across Sessions 1-4 while blocked on an API key; finished only once its scope was revised. |
+| v0.2    | **REDUCED STARTER SCOPE 2026-08-09.** Add Reading Comprehension: hand-authored, independently-verified passages + questions (same method as v0.1's revised approach — no live API). New `passages` table + `passage_id` FK; new RC question-type taxonomy (10 types); `GET /api/passage/random` (passage + all its questions); reuses existing grade endpoint. Started at 2 passages (law, natural_science) x 5 questions instead of the originally proposed 4 passages x 5 — deliberately smaller to validate the approach first; more content areas can be added the same way later (see Backlog). No Analytical Reasoning — not part of the current real LSAT (removed Aug 2024). | [x] DONE — 2026-08-09. 2 passages, 10 RC questions, 10/10 independently verified; re-verified in Session 8 (13/13 pytest, live API smoke test, `tsc --noEmit` + `npm run build` clean) | **Written 4th, completed 4th** — tag `v0.2`, 2026-08-09. Built on top of finished v0.4 + v0.9, so it reused their CSS classes rather than adding any. |
+| v0.3    | Question metadata tagging (section, question_type, content_area) + filtered practice mode (select types/content areas to practice)                                                                                                                                     | [ ] not started | Not started. Candidate for **5th** — see Next Up; remaining order is genuinely undecided, not implied by the numbers. |
+| v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [x] DONE — 2026-08-09, visually confirmed via Playwright screenshots | **Written 2nd, completed 1st** — the first version ever finished. Tag `v0.4` = `6725b0b`, 2026-08-09 18:35. Built on top of an *incomplete* v0.1. |
+| v0.5    | Uniqueness/dedup check via vector DB                                                                                                                                                                                                                                   | [ ] not started | Not started, order undecided. |
+| v0.6    | Full-length practice test assembly (real blueprint: 2 LR + 1 RC, correct question counts, timed sections)                                                                                                                                                              | [ ] not started | Not started. **Hard dependency on v0.3** (type/content-area filtering) — cannot be built before it regardless of numbering. |
+| v0.7    | Scaled score conversion (120-180)                                                                                                                                                                                                                                      | [ ] not started | Not started, order undecided. Depends on v0.6 existing to score against. |
+| v0.8    | Deploy so friend can access it online                                                                                                                                                                                                                                  | [ ] not started | Not started, order undecided — and note v0.9 (numbered *after* it) is already done, so this number in particular implies nothing about sequence. |
+| v0.9    | Growtopia-inspired visual theme (cosmetic/CSS-only — no grading/generation/data-model changes). Original pixel-chunky UI: wood-panel borders/textures, beveled 3D block buttons, bright saturated palette, applied to nav, buttons, general chrome, and the themed `/progress` dashboard. Press Start 2P reserved for headings/large stat numbers only; a legible rounded sans font for nav links, button labels, and badge text. The question-reading screen (stimulus/stem/choices) stays clean, high-contrast, unstyled by the pixel theme. | [x] DONE — 2026-08-09, visually confirmed via Playwright screenshots | **Written 3rd, completed 2nd** — same commit/tag moment as v0.4 (`6725b0b`, 2026-08-09 18:35), since both were verified together in Session 4. Completed *before* v0.1 and v0.2 despite the highest number. |
+| v0.x    | [add more as scope becomes clearer]                                                                                                                                                                                                                                    | [ ] not started | — |
 
 ---
 
 ## Next Up (current version's immediate tasks)
 
-- [ ] Get user confirmation on the v0.1 finishing-a-version checklist, then
-      commit + annotated-tag (v0.1) + push per CLAUDE.md's Workflow Notes
-- [ ] Decide next version to build: v0.3 (filtered/cycle-by-type practice —
-      small, no dependencies) vs. v0.2 (Reading Comprehension, a
-      prerequisite for a real-blueprint v0.6 full-length timed test)
+- [x] v0.2 confirmed done by the user and the full Finishing a Version
+      checklist run: README box checked, Reconstruction Prompts Index row
+      added, Version Plan status flipped to DONE, WIP commit amended into the
+      final v0.2 commit, annotated tag `v0.2` created, commit + tag pushed.
+- [x] `.claude/commands/` resolved: user chose NOT to track them. Added
+      `.claude/commands/` to `.gitignore` as personal local slash commands.
+- [ ] Decide what gets built 5th — the remaining numbers do NOT imply order
+      (see the Version Plan note). Live options: v0.3 (filtered/cycle-by-type
+      practice — small, unblocked, and a hard prerequisite for v0.6) vs.
+      expanding RC content to social_science/humanities (Backlog) vs. scoping
+      v0.6 (timed full test) now that both LR and RC content exist.
 - [ ] Scope v0.6 (full-length timed test) properly before building — user
-      asked for "a full test prep with a timer"; needs explicit scope
-      decision on LR-only interim vs. waiting for v0.2/RC (see chat)
+      asked for "a full test prep with a timer." Its stated blueprint (2 LR +
+      1 RC) is now unblocked on content, but it still needs v0.3's filtering/
+      selection to assemble a test by type, so v0.3 should land first.
 
 ## Backlog (out-of-scope for current version — don't build yet)
 
@@ -85,6 +127,52 @@
       is scheduled. If revisited, must honor the same hard constraints:
       never influence/be influenced by grading logic, never reward
       speed/guessing, live only on `/progress` (no mid-practice popups).
+- [ ] Expand RC content beyond v0.2's 2 starter passages — add social_science
+      and humanities passages (the other 2 of the original 4 real LSAT RC
+      content areas), and cover the 2 RC types not yet used (rc_passage_
+      organization, rc_analogous_situation). Same method: hand-author +
+      independent subagent verification, then regenerate `prep.txt`.
+- [ ] **BUG (pre-existing, v0.4 defect — reproduced live 2026-08-09):**
+      orphaned `attempts` rows make `/progress` self-contradictory.
+      `get_overall_stats()` counts every attempt row, but `get_stats_by_type()`
+      JOINs to `questions` and silently drops attempts whose `question_id` no
+      longer exists. The seed script wipes and reinserts `questions` with fresh
+      autoincrement ids, but never clears `attempts`, and there's no
+      `ON DELETE CASCADE`. Observed after a reseed: overall total = 7 while the
+      by-type rows summed to 5. Fix is small — add `ON DELETE CASCADE` to the FK
+      (plus a `PRAGMA foreign_keys = ON`, which sqlite3 does NOT enable by
+      default), or have the seed script clear `attempts` alongside `questions`.
+      NOT fixed during v0.2: it predates v0.2, belongs to v0.4's surface, and
+      pulling it in would violate the Versioning Strategy. Do it as a small
+      standalone fix or fold it into the next version.
+- [ ] **DATA ACCURACY (found Session 8):** all 24 questions carry
+      `verified: True`, but only 21 were ever independently re-solved by a fresh
+      subagent (11 LR in Session 5, 10 RC in Session 6). LR questions 1-3
+      (necessary_assumption, flaw, parallel_reasoning) are the original Session 1
+      mock set — hand-authored with methodology-based explanations, but never
+      subagent-verified. The flag over-claims for those three. Fix: actually
+      re-solve them, then keep the flag; don't just flip it.
+- [ ] **QUALITY (found Session 8):** the verification method confirms the marked
+      answer beats the other four, but cannot detect weak distractors or an
+      over-strong key. Concrete instance: LR question 1's answer (A) — "**no**
+      factor other than the cameras contributed" — does not actually pass the
+      negation test it claims to (negated, another contributing factor still
+      leaves cameras as a substantial cause, so the argument bends rather than
+      collapses); real LSAT necessary-assumption answers are hedged far more
+      weakly. That stimulus also contains an untested classic gap: it reports a
+      drop in *reported* crime and concludes about *crime*. The 21/21 first-pass
+      verification rate is itself a signal that distractors are too easy, since
+      real LSAT items sit at 40-70% human accuracy. Proposed fix: add an
+      adversarial pass that argues the best case for each *wrong* answer, rather
+      than only re-solving. Note the author and verifier are the same model
+      family, so blind spots are correlated — this is re-sampling one prior, not
+      a genuine second opinion.
+- [ ] **BUG (minor, same root cause as the log-date confusion):** `answered_at`
+      is stored as UTC and `get_attempts_by_day()` groups on `substr(answered_at,
+      1, 10)`, so `/progress`'s "attempts over time" buckets by **UTC** date.
+      For a US-Pacific user, anything practiced after 5pm local is charted on the
+      next day. Confirmed live: attempts made 2026-08-09 evening PDT charted
+      under `2026-08-10`. Decide on a timezone convention before v0.7/v0.8.
 
 ---
 
@@ -101,9 +189,16 @@
 | 2026-08-09   | Concrete v0.9 palette: parchment `#fbf3dd` page bg, wood-brown `#8b5a2b` panels (shadow `#4a2f17` / highlight `#c68b4a` bevel edges), grass-green `#388e3c` primary buttons, sky-blue `#2a78d6` secondary buttons (reused from the dashboard's already-validated series color), fixed status green/red (`#0ca30c`/`#d03b3b`) for correct/incorrect only. All chosen with the dataviz skill's `validate_palette.js` — every text-on-fill and data-series-vs-surface pairing clears >=3:1 contrast in both light/dark; status green/red fails the CVD-separation check (expected/documented in the skill itself) so the UI never conveys correct/incorrect by color alone, always with a text label too. | Originally proposed palette (proposal turn) was directional only; this session made it concrete and checked it against real contrast math instead of eyeballing, per the dataviz skill's explicit instruction to validate rather than reason about it. |
 | 2026-08-09   | Split "chrome" vs "reading" surfaces: `.clean-card` (plain white/light, system font) wraps stimulus/question stem/answer choices AND the post-grade explanation; a small `.result-chip` (themed, wood-bordered) carries only the short correct/incorrect + answer-letter status | The user's constraint was "clean reading area, themed frame around it." Explanation text is long-form reading content like the stimulus, so it stays in the clean card; the correct/incorrect verdict is short status text, so it's themed like the rest of the chrome. |
 | 2026-08-09   | v0.4 and v0.9 built this session despite v0.1 still being incomplete/blocked | Explicit user instruction ("proceed") to work on unblocked, independent work while v0.1 waits on an `ANTHROPIC_API_KEY` from the user — a deliberate exception to the "finish current version first" convention, not a default to repeat without similar explicit direction. |
-| 2026-08-10   | v0.1 revised: dropped the live-Anthropic-API requirement in favor of a hand-authored, independently-verified static question bank | User explicitly asked to move away from live AI generation to "verified used Questions" — clarified (after flagging copyright risk around real/official LSAT questions) to mean ORIGINAL questions, verified for correctness. Live pipeline code kept, untouched, as an optional future path. |
-| 2026-08-10   | Verification method for new questions: fresh subagent (no memory of marked answer) independently re-solves each one; only keep on match | Mirrors the exact independent re-solve check already documented in CLAUDE.md's Explanation Methodology, just run by Claude Code during authoring instead of via a live API call from the running app — satisfies "no Anthropic API used" while preserving the same rigor. Result: 11/11 new questions matched on first pass. |
-| 2026-08-10   | `GET /api/question/current` changed from "always the latest-inserted row" to "random row on every call" | User reported the app kept showing the same question after the bank grew to 14 — the endpoint had no concept of multiple questions since v0.1 was originally scoped around a single question. Minimal fix: `ORDER BY RANDOM() LIMIT 1` instead of `ORDER BY id DESC LIMIT 1`; kept the same route/URL to avoid frontend churn. |
+| 2026-08-09   | v0.1 revised: dropped the live-Anthropic-API requirement in favor of a hand-authored, independently-verified static question bank | User explicitly asked to move away from live AI generation to "verified used Questions" — clarified (after flagging copyright risk around real/official LSAT questions) to mean ORIGINAL questions, verified for correctness. Live pipeline code kept, untouched, as an optional future path. |
+| 2026-08-09   | Verification method for new questions: fresh subagent (no memory of marked answer) independently re-solves each one; only keep on match | Mirrors the exact independent re-solve check already documented in CLAUDE.md's Explanation Methodology, just run by Claude Code during authoring instead of via a live API call from the running app — satisfies "no Anthropic API used" while preserving the same rigor. Result: 11/11 new questions matched on first pass. |
+| 2026-08-09   | `GET /api/question/current` changed from "always the latest-inserted row" to "random row on every call" | User reported the app kept showing the same question after the bank grew to 14 — the endpoint had no concept of multiple questions since v0.1 was originally scoped around a single question. Minimal fix: `ORDER BY RANDOM() LIMIT 1` instead of `ORDER BY id DESC LIMIT 1`; kept the same route/URL to avoid frontend churn. |
+| 2026-08-09   | v0.2 (RC) started at 2 passages instead of the originally proposed 4 | User chose "start smaller" to validate the passage/question data model and RC taxonomy before committing to a bigger authoring effort. Remaining 2 content areas (social_science, humanities) logged to Backlog, not built now. |
+| 2026-08-09   | New `passages` table + nullable `passage_id` FK on `questions`, rather than duplicating passage text onto every question row | Multiple RC questions share one passage; normalizing avoids text duplication and lets `GET /api/passage/random` return the passage once with all its questions. `stimulus` on `questions` became nullable (RC questions have no stimulus of their own — their text lives on the joined passage). |
+| 2026-08-09   | RC question types prefixed `rc_` (e.g. `rc_main_point`) even where conceptually similar to an LR type name | Keeps LR and RC fully distinct in the schema and in `/progress`'s accuracy-by-type breakdown — an LR "main point" question and an RC "main point" question aren't really the same skill, and prefixing avoids needing to touch v0.4's already-shipped stats query/model to disambiguate by section. |
+| 2026-08-09   | RC practice flow is a separate `/reading-comp` page (passage read once, then its questions answered in sequence), not merged into LR's per-question-random flow | Real RC practice means reading a passage once and answering several questions about it in a row, not re-fetching/re-reading the same passage repeatedly under random per-question selection. Keeping LR (`/`) and RC (`/reading-comp`) as separate flows avoided restructuring the already-shipped LR page at all — pure addition. |
+| 2026-08-09   | Added `prep.txt` (repo root) as a derived, regeneratable export of the full question bank, plus a standing CLAUDE.md rule to regenerate it after authoring any new question | User wants a plain-text study file that's always in sync. Regenerating from the canonical source files (`mock_questions.py`, `rc_content.py`) via a script avoids the drift risk of manually appending to the file by hand. |
+| 2026-08-09   | Corrected every `2026-08-10` date in this file to `2026-08-09` (Sessions 4-7 headers, 8 Key Decisions rows, the Reconstruction Prompts Index, and two Version Plan scope cells) | Every commit in the repo is dated 2026-08-09 (`git log`), so Sessions 4-7 could not have happened on the 10th. Root cause: `prep.txt`'s generated header reads `2026-08-10T02:36:54+00:00`, which is **UTC** — 19:36 PDT on 08-09 — and that UTC date got copied into the log as if it were the local session date. Sessions 1-3 correctly used local dates, so local is the convention. `prep.txt` itself was NOT changed: it's a derived export and its UTC timestamp is accurate. |
+| 2026-08-09   | Version numbers are stable scope IDs, not build order; added an explicit "Build order" column to the Version Plan instead of renumbering | User noticed v0.2's RC page reuses v0.9's CSS classes, which is only possible if v0.9 was built first — correctly inferring the table's sequential look was misleading. True order: v0.4 and v0.9 completed 1st/2nd (`6725b0b`), v0.1 3rd (`7f6cbd3`), v0.2 4th. Renumbering was rejected because `v0.1`/`v0.4`/`v0.9` are annotated tags already pushed to GitHub and every reconstruction prompt cross-references those numbers — renaming would invalidate published history to fix a presentation problem. An explicit column keeps the record honest at zero cost to history. |
 
 ---
 
@@ -112,18 +207,21 @@
 > One entry per completed version. Full prompt text lives in that version's entry
 > below in the Session Log — this table is just a lookup.
 
-| Version | Date completed | Reconstruction prompt location |
-| ------- | -------------- | ------------------------------ |
-| v0.1    | 2026-08-10     | Session 5 entry below          |
-| v0.4    | 2026-08-10     | Session 4 entry below          |
-| v0.9    | 2026-08-10     | Session 4 entry below          |
+| Completion order | Version | Date completed   | Tagged commit | Reconstruction prompt location |
+| ---------------- | ------- | ---------------- | ------------- | ------------------------------ |
+| 1st              | v0.4    | 2026-08-09 18:35 | `6725b0b`     | Session 4 entry below          |
+| 2nd              | v0.9    | 2026-08-09 18:35 | `6725b0b`     | Session 4 entry below          |
+| 3rd              | v0.1    | 2026-08-09 19:06 | `7f6cbd3`     | Session 5 entry below          |
+| 4th              | v0.2    | 2026-08-09       | tag `v0.2`    | Session 6 entry below    |
 
-Note on ordering: v0.1 was completed chronologically AFTER v0.4 and v0.9
-(its scope was revised mid-project — see Key Decisions Log). The commit
-that gets tagged `v0.1` will therefore already contain v0.4/v0.9's code
-too, since it builds on the current `main` history. v0.1's reconstruction
-prompt below describes only v0.1's own logical scope, for anyone who wants
-to rebuild just that layer.
+Note on ordering: the completion order above is NOT the version-number order
+— see the Version Plan's Build order column for the full explanation. v0.1
+was completed chronologically AFTER v0.4 and v0.9 (its scope was revised
+mid-project — see Key Decisions Log), so the commit tagged `v0.1` (`7f6cbd3`)
+already contains v0.4's and v0.9's code, because it builds on the same linear
+`main` history. Each reconstruction prompt below describes only its own
+version's logical scope, for anyone who wants to rebuild just that layer —
+so a prompt does not correspond to the full contents of its tagged commit.
 
 ---
 
@@ -131,7 +229,391 @@ to rebuild just that layer.
 
 > Newest entry at the top. Tag each entry with the version it belongs to.
 
-### [v0.1] Session 5 — 2026-08-10
+### [v0.2 + docs] Session 8 — 2026-08-09 (build-order audit, date fixes, v0.2 finalized)
+
+**Prompt(s) used:**
+
+```
+[/resume]
+
+Before I approve v0.2, I need to understand the actual build order. The
+frontend reused "v0.9 theme classes" for the RC page, which implies theme
+(v0.9) was already built before v0.2 (RC) — but the Version Plan lists v0.2
+before v0.9. What's the true chronological build order so far, version by
+version? And does the Version Plan table's numbering still represent the
+order things were/will be built in, or has it drifted from that? If it's
+drifted, fix the table now so it accurately reflects reality before we go
+any further — I'd rather have honest numbering than a table that looks
+sequential but isn't.
+
+continue and fix this. Once all the bugs and mismatches are fixed, lets
+continue with v0.2
+```
+
+**What was done:**
+
+- **Build-order audit.** The user's inference was correct: v0.9 was completed
+  and tagged before v0.2 was started. Reconstructed the true order from `git
+  log`/`git for-each-ref` rather than from the session narrative. Write order:
+  v0.1 (Session 1 base app) → v0.4 → v0.9 (both Session 2) → v0.2 (Session 6).
+  Completion order: v0.4 and v0.9 together (`6725b0b`, 18:35) → v0.1
+  (`7f6cbd3`, 19:06) → v0.2. Cause of the drift: v0.4/v0.9 were explicitly
+  authorized to proceed while v0.1 sat blocked on an API key, and v0.1 then
+  completed by having its scope revised rather than by the blocker clearing.
+- Added a **Build order column** to the Version Plan giving each version both
+  its write position and its completion position, with tag + commit hash for
+  the done ones and an explicit "order undecided" for the rest (plus v0.6's
+  hard dependency on v0.3, and a note that v0.8 sits *before* an
+  already-finished v0.9). Added a header note stating the numbers are stable
+  scope IDs. **Renumbering was considered and rejected** — `v0.1`/`v0.4`/`v0.9`
+  are annotated tags already pushed to GitHub and every reconstruction prompt
+  cross-references those numbers, so renaming would damage published history
+  to fix a presentation problem. Mirrored a one-line version of this into
+  `README.md` and added a Key Decisions row.
+- **Date correction.** Sessions 4-7, eight Key Decisions rows, the
+  Reconstruction Prompts Index, and two Version Plan scope cells all claimed
+  `2026-08-10`; every commit in the repo is dated `2026-08-09`. Root cause
+  found rather than guessed: `prep.txt`'s generated header reads
+  `2026-08-10T02:36:54+00:00`, which is **UTC** — 19:36 PDT on 08-09 — and got
+  copied in as a local date. Corrected all of them in `prompt.md` and logged
+  the correction itself as a Key Decisions row so the rewrite isn't silent.
+  `prep.txt` deliberately NOT changed: it's a derived export and its UTC
+  timestamp is correct.
+- **Independent re-verification of v0.2** instead of trusting Session 6's
+  screenshots (which this session could not see): 13/13 pytest; in-process
+  bank integrity check (14 LR / 14 unique types, 2 passages, 10 RC / 8 types,
+  zero missing explanations, all 5-choice with valid A-E keys); live uvicorn
+  smoke test on port 8077 covering the passage endpoint's shape and
+  non-leakage, all five answer letters against RC question 39, and 12 LR draws
+  confirming `passage_id IS NULL` separation holds; `tsc --noEmit` and
+  `npm run build` both clean. Confirmed `prep.txt` regenerates identically
+  apart from its timestamp.
+- Updated `CLAUDE.md`'s Commands section — the "Build: not configured yet (no
+  production build has been run for either side)" line was stale the moment
+  the build above succeeded.
+- Fixed the **stale Next Up section**, which was still listing "get
+  confirmation on the v0.1 checklist, then tag v0.1" long after v0.1 shipped.
+
+**What broke / what to watch:**
+
+- **Two genuine bugs found, neither fixed, both logged to Backlog** — both are
+  pre-existing v0.4 defects, not v0.2 regressions, and fixing them inside v0.2
+  would violate the Versioning Strategy:
+  1. Orphaned `attempts` rows. The seed script wipes and reinserts `questions`
+     with fresh ids but never clears `attempts`, and the FK has no
+     `ON DELETE CASCADE` (sqlite3 also doesn't enforce FKs without
+     `PRAGMA foreign_keys = ON`). Reproduced live: `/api/stats/summary`
+     reported overall total 7 while the by-type rows summed to 5. Session 5
+     noted this in passing; this session confirmed it still reproduces.
+  2. `/progress`'s "attempts over time" buckets by **UTC** date, so US-Pacific
+     evening practice charts on the following day. Same root cause as the log
+     date confusion above.
+- v0.2's code was not modified this session — only docs. The re-verification
+  was read-only apart from reseeding the gitignored local dev DB.
+
+**Next session should:**
+
+- Build v0.3 (filtered/cycle-by-type practice) — recommended 5th, since it's
+  small, unblocked, and a hard prerequisite for v0.6's timed full test.
+- Consider knocking out the two Backlog bugs above as a quick standalone fix
+  first; they're both small and they make `/progress` actively misleading.
+
+**Reconstruction prompt (only if this session completed a version):**
+
+```
+Not written separately — this session finalized v0.2, whose reconstruction
+prompt was already drafted in the Session 6 entry below and needed no
+changes (no v0.2 code was modified this session). It is now listed in the
+Reconstruction Prompts Index as the 4th completed version.
+```
+
+---
+
+### [v0.2] Session 7 — 2026-08-09 (session wrap-up / handoff)
+
+**Prompt(s) used:**
+
+```
+add to the prep.txt the reasoning of why an answer is the right answer.
+also add this to CLAUDE.md so it is always done after every new question
+is created
+
+Before I restart this session, save state now using the /end logic even
+though the shortcut may not be working: 1) update prompt.md's Current
+State (overwrite), 2) add a new Session Log entry (prompts, what was
+built/changed, what broke/unverified, next-session instructions), 3)
+check whether the current version is genuinely complete end-to-end -
+this sounds like it's still in progress based on what we were just doing
+(testing RC submit->grade->next-question) - if so, commit as WIP with a
+clear message, don't check off README, don't write a reconstruction
+prompt, don't tag, unless actually fully done, 4) print a short summary
+(version/status, what got done, what's next, pushed vs. local-only).
+Then confirm you're done before I restart.
+```
+
+**What was done:**
+
+- Checked `prep.txt`: the reasoning was already present for all 24
+  questions (`Correct Answer:` + full `Explanation:` per entry, pulled
+  from the `explanation` field every question already requires). Nothing
+  needed adding to the file itself. Strengthened `CLAUDE.md`'s Workflow
+  Notes rule to say this explicitly — the `explanation` field must contain
+  full methodology-based reasoning, and `prep.txt` inherits it
+  automatically via the export script — so it's an unambiguous, documented
+  requirement going forward, not just an implicit side effect of how the
+  script happens to work today.
+- **Corrected the record on v0.2's status.** The user's guess that the RC
+  flow was "still in progress" wasn't quite accurate — that flow (submit →
+  grade → next-question) was actually tested successfully via Playwright
+  earlier this session (Session 6), with screenshots confirming it works.
+  What was genuinely missing was the user's *explicit confirmation* of the
+  Session 6 finishing-checklist, which was presented but never answered
+  (the conversation moved to the `prep.txt` question instead). Per the
+  user's own instruction this turn ("unless actually fully done"), and
+  since that confirmation gate was never cleared, v0.2 is being treated as
+  NOT done: reverted `README.md`'s v0.2 checkbox back to unchecked, reverted
+  the Version Plan status from "DONE" to "built + verified, pending
+  confirmation," and removed the v0.2 row from the Reconstruction Prompts
+  Index (the reconstruction prompt text itself stays drafted in the
+  Session 6 entry, ready to reuse once confirmed — no need to rewrite it).
+- Overwrote `prompt.md`'s Current State to reflect this precisely.
+- Committed everything (v0.2's RC feature + `prep.txt` tooling + this
+  session's doc corrections) as a single **work-in-progress commit** — no
+  annotated tag, not pushed to GitHub. See commit hash in the summary
+  printed after this entry / in `git log`.
+
+**What broke / what to watch:**
+
+- Nothing code-level broke this session — this was verification-status
+  bookkeeping and a documentation clarification, not new feature work.
+- The untracked `.claude/commands/resume.md` file (noted in Sessions 5-6)
+  is still sitting there, still not staged into any commit — it's IDE/
+  harness-created, not this project's work, so it's being left alone
+  again.
+- Because v0.2 is committed as WIP rather than finished, `main`'s latest
+  commit will NOT be tagged `v0.2` — don't assume the presence of a commit
+  means the version is "done" per this project's own definition; check
+  `prompt.md`'s Current State and the Version Plan status column instead.
+
+**Next session should:**
+
+- Ask the user directly: "Does v0.2 (2-passage RC) look good to finalize?"
+  If yes: re-check the README box, add the v0.2 row back to the
+  Reconstruction Prompts Index (prompt text already exists in Session 6),
+  amend the Version Plan status to DONE, then commit that (or amend into
+  the existing WIP commit if it hasn't been pushed anywhere else yet),
+  annotated-tag `v0.2`, and push everything (this WIP commit has not been
+  pushed, so v0.1/v0.4/v0.9's tags are the only ones currently on GitHub).
+- If the user wants changes to v0.2 first, make them, then re-run the
+  verification/confirmation cycle before tagging.
+- Separately, decide next priority per the last few sessions' open
+  question: v0.3 (filtered/cycle-by-type) vs. expanding RC content
+  (Backlog) vs. scoping v0.6 (timed test).
+
+**Reconstruction prompt (only if this session completed a version):**
+
+```
+Not written — this session did not complete a version. (v0.2's
+reconstruction prompt was already drafted in the Session 6 entry below,
+in preparation for when it IS confirmed; it does not need to be rewritten,
+just reused once the user confirms and the version is actually tagged.)
+```
+
+---
+
+### [v0.2] Session 6 — 2026-08-09
+
+**Prompt(s) used:**
+
+```
+lets work on v0.2 instead
+[proposed data model (passages table + passage_id FK), a 10-type RC
+taxonomy, and a 4-passage/20-question content plan (law, natural_science,
+social_science, humanities x 5 each) before building]
+
+Lets start smaller. Then once done. Create a txt file with all of the
+questions and answers called prep.txt
+#Whenever you create a new question and answer, add it to the prep.txt
+```
+
+**What was done:**
+
+- Reduced v0.2's starting scope to 2 passages (law, natural_science) per
+  the user's "start smaller" direction, instead of the originally proposed
+  4.
+- Defined a 10-type RC question taxonomy (rc_main_point,
+  rc_specific_detail, rc_inference, rc_author_attitude,
+  rc_passage_organization, rc_analogous_situation, rc_application,
+  rc_strengthen_weaken, rc_purpose_of_reference, rc_meaning_in_context) and
+  added it to the `lsat-methodology` skill, alongside the existing LR
+  taxonomy.
+- Data model: added a `passages` table (content_area, title, passage_text)
+  and a nullable `passage_id` FK on `questions`; made `stimulus` nullable
+  (RC questions have none of their own). Deleted and recreated the local
+  dev DB to pick up the new schema (gitignored, disposable).
+- Authored 2 original passages (~460-470 words each) and 5 questions per
+  passage (10 total), covering 8 of the 10 RC types. **Independently
+  verified all 10** the same way as v0.1's LR questions — 10 parallel fresh
+  subagents, each given only the passage + question + choices (never the
+  marked answer). 10/10 matched on the first pass.
+- Backend: `GET /api/passage/random` (returns one random passage + ALL of
+  its questions together, so the frontend can keep the passage pinned
+  while cycling — different shape than LR's one-question-at-a-time random
+  draw). `get_random_question()` (LR) updated to explicitly exclude
+  passage-attached rows (`WHERE passage_id IS NULL`) so the two flows stay
+  separate. Grading needed zero changes — the existing
+  `POST /api/question/{id}/grade` already worked generically for any
+  question by id. Updated `scripts/generate_question.py` to also seed
+  passages + RC questions in mock mode. Added `tests/test_reading_comp.py`
+  (4 tests: 404 on empty, passage+questions returned correctly with
+  answer/explanation never leaked, RC grading works, LR's random endpoint
+  excludes RC questions) — 13/13 backend tests passing.
+- Frontend: new `/reading-comp` nav tab and page. Passage stays pinned in a
+  `.clean-card` (scrollable) on the left while the user cycles through its
+  5 questions one at a time on the right (`Question N of 5` indicator);
+  "Next Question" advances within the same passage, "New Passage" appears
+  only after the last question and fetches a new random passage. Reused
+  the existing `.block-btn`/`.result-chip`/`.clean-card` theme classes
+  as-is — no new CSS needed. Visually confirmed via Playwright: initial
+  passage+question render, full submit → grade → "Correct!" chip →
+  explanation → "Next Question" → question 2 loads with a fresh radio
+  selection.
+- Built `scripts/export_prep_txt.py`, which regenerates `prep.txt` (repo
+  root) from the canonical source files (`mock_questions.py`,
+  `rc_content.py`) — 14 LR questions + 2 passages/10 RC questions, ~710
+  lines, human-readable. Added a standing rule to `CLAUDE.md`'s Workflow
+  Notes: regenerate `prep.txt` after authoring any new question, never
+  hand-edit it directly (also noted in Do NOT touch). Updated `CLAUDE.md`'s
+  Project Structure and Commands sections to reflect the new files.
+- Per `CLAUDE.md`'s Finishing a Version checklist, did NOT commit, tag, or
+  push yet — presenting the checklist next, for user confirmation.
+
+**What broke / what to watch:**
+
+- Had to delete the local `backend/data/lsat_prep.db` file to pick up the
+  new `passages` table / `passage_id` column, since the schema uses
+  `CREATE TABLE IF NOT EXISTS` (won't alter an existing table). This file
+  is gitignored/disposable, so this was safe, but worth remembering if the
+  schema changes again — it doesn't auto-migrate.
+- v0.2 is being marked done at a deliberately reduced scope (2 of the
+  originally-proposed 4 content areas, 8 of 10 RC types). This mirrors how
+  v0.1 was completed at a revised/reduced scope earlier this session — see
+  the new Backlog entry for expanding RC content later.
+- The untracked `.claude/commands/resume.md` file (noted in Session 5) is
+  still sitting there, still not part of this session's work, still not
+  staged into any commit.
+
+**Next session should:**
+
+- Get user confirmation on this checklist, then commit + tag `v0.2` + push.
+- Decide next priority: v0.3 (filtered/cycle-by-type practice, small) vs.
+  expanding RC content (Backlog) vs. scoping v0.6 (timed full test) now
+  that both LR and RC exist, even at reduced scope.
+
+**Reconstruction prompt — v0.2 (Reading Comprehension, reduced starter scope):**
+
+```
+Rebuild this project (LSAT Prep) to v0.2's state. This is everything in the
+v0.1 reconstruction prompt (Session 5, above) PLUS the following Reading
+Comprehension layer. (v0.4's dashboard and v0.9's theme are separate,
+already-completed versions layered on top in real project history - this
+entry describes v0.2's own logical scope, RC only.)
+
+DATA MODEL ADDITIONS:
+- New SQLite `passages` table: id, content_area (TEXT, e.g. "law" or
+  "natural_science"), title (TEXT, nullable), passage_text (TEXT), created_at.
+- `questions` table gains a nullable `passage_id INTEGER REFERENCES
+  passages(id)` column. `stimulus` becomes nullable (NULL for RC questions -
+  their text lives on the joined passage instead).
+- A passage is read once and has MULTIPLE questions asked against it -
+  this is structurally different from LR, where every question is fully
+  self-contained.
+
+CONTENT (hand-authored, independently verified - same method as v0.1, no
+live API at any point):
+- 2 original passages, ~460-470 words each: one law-content-area passage
+  (the historical shift from caveat emptor/privity doctrine to strict
+  products liability), one natural_science-content-area passage (the
+  scientific debate over whether dinosaurs were ectothermic, endothermic,
+  or mesothermic).
+- 5 questions per passage (10 total), covering 8 of a newly-defined
+  10-type RC taxonomy: rc_main_point, rc_specific_detail,
+  rc_purpose_of_reference, rc_strengthen_weaken, rc_meaning_in_context
+  (law passage); rc_main_point, rc_specific_detail, rc_inference,
+  rc_application, rc_author_attitude (natural_science passage). NOT yet
+  covered: rc_passage_organization, rc_analogous_situation (Backlog).
+- Verification: each question independently re-solved by a fresh subagent
+  given only the passage + question + choices (never the marked answer).
+  10/10 matched on first pass, zero revisions needed.
+- RC question types are prefixed `rc_` even where conceptually close to an
+  LR type name (e.g. rc_main_point vs. LR's main_point) - this is
+  deliberate, to keep LR and RC fully distinct in the schema and in the
+  /progress dashboard's accuracy-by-type breakdown without needing to
+  touch that already-shipped stats query.
+
+API:
+- `GET /api/passage/random` - returns one random passage PLUS all of its
+  associated questions together (not one question at a time): {passage:
+  {id, content_area, title, passage_text}, questions: [{id, section,
+  question_type, content_area, passage_id, stimulus (null), question_stem,
+  choices}, ...]} - no correct_answer/explanation, same privacy pattern as
+  the LR endpoint.
+- `GET /api/question/current` (LR) updated: `WHERE passage_id IS NULL`
+  added to its random-selection query, so it never accidentally serves an
+  RC question.
+- `POST /api/question/{id}/grade` needed NO changes - it already worked
+  generically by question id for any section.
+- Seeding script (`scripts/generate_question.py`, mock mode) now also
+  inserts the 2 passages and 10 RC questions, mapping each RC question's
+  passage_id (a string key in the source data) to the passage's actual
+  integer DB id after insert.
+
+FRONTEND:
+- New nav link "Reading Comp" -> `/reading-comp`.
+- New page: fetches `GET /api/passage/random` once on load. Renders the
+  passage in a `.clean-card` (scrollable, pinned) alongside the current
+  question (also `.clean-card`, radio choices, "Question N of M · Type: X"
+  indicator). Submitting grades via the existing per-question grade
+  endpoint and shows the same `.result-chip` + explanation pattern as LR.
+  "Next Question" (primary button) advances to the next question ON THE
+  SAME PASSAGE, resetting selection/result state; only once the last
+  question in the set is answered does the button become "New Passage"
+  (secondary button), which re-fetches a new random passage from scratch.
+  No new CSS/theme classes were needed - reused v0.9's existing
+  `.block-btn`/`.result-chip`/`.clean-card` classes as-is.
+
+TOOLING:
+- `scripts/export_prep_txt.py`: regenerates `prep.txt` (repo root, plain
+  text) from `mock_questions.py` + `rc_content.py` (the canonical source
+  files) - LR questions numbered [1]..[14], then RC organized by passage
+  with questions numbered [Q1]..[Q5] per passage. Never hand-edit
+  `prep.txt`; re-run this script after authoring/changing any question.
+  Standing rule (CLAUDE.md Workflow Notes): do this every time a new
+  question is authored and verified.
+
+KEY DECISIONS:
+- Started at 2 passages instead of the originally-proposed 4 (user chose
+  "start smaller" to validate the approach before a bigger authoring
+  commitment) - the other 2 real-LSAT RC content areas (social_science,
+  humanities) and the 2 uncovered RC types are logged to Backlog, not
+  abandoned.
+- RC's practice flow is deliberately a SEPARATE page/flow from LR's, not
+  merged into one "random question" endpoint - reading a passage once and
+  answering several questions in sequence is fundamentally different UX
+  from LR's independent per-question random draw.
+
+NOT YET IMPLEMENTED as of v0.2: same list as v0.1's reconstruction prompt
+(filtered/cycle-by-type practice [v0.3], dedup [v0.5], full-length
+timed-test assembly [v0.6] - now closer since both LR and RC content
+exist, but still needs v0.3 first for type/content-area filtering - scaled
+scoring [v0.7], deployment [v0.8]), PLUS: RC content areas social_science
+and humanities, and RC types rc_passage_organization / rc_analogous_situation
+(all logged to Backlog, not built this version).
+```
+
+---
+
+### [v0.1] Session 5 — 2026-08-09
 
 **Prompt(s) used:**
 
@@ -340,7 +822,7 @@ NOT YET IMPLEMENTED as of v0.1 (don't build ahead of scope):
 
 ---
 
-### [v0.4 + v0.9] Session 4 — 2026-08-10
+### [v0.4 + v0.9] Session 4 — 2026-08-09
 
 **Prompt(s) used:**
 
