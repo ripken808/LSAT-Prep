@@ -17,9 +17,9 @@ conventions and `prompt.md` for the detailed session-by-session log.
 > check a box off early to look further along than the project actually is.
 >
 > **Version numbers are scope IDs, not build order.** Actual completion order so
-> far: v0.4 → v0.9 → v0.1 → v0.2 → v0.3 (five done). See the Build order column
-> in `prompt.md`'s Version Plan for the full record and why the numbers were not
-> renumbered.
+> far: v0.4 → v0.9 → v0.1 → v0.2 → v0.3 → v0.5 (six done). See the Build order
+> column in `prompt.md`'s Version Plan for the full record and why the numbers
+> were not renumbered.
 
 - [x] **v0.1** — Hand-authored, independently-verified Logical Reasoning
       question bank (14 questions, all 14 official LR types) + verified answer
@@ -35,7 +35,10 @@ conventions and `prompt.md` for the detailed session-by-session log.
       (42 total) so single-type practice is substantial.
 - [x] **v0.4** — Practice stats dashboard (attempts history + `/progress` page:
       overall accuracy, accuracy by type, attempts over time). No streaks/XP/badges.
-- [ ] **v0.5** — Uniqueness/dedup check via vector DB.
+- [x] **v0.5** — Near-duplicate detection over the question bank: local
+      embeddings, cosine similarity, and a `check_duplicates.py` report run
+      after authoring. Catches questions converging in wording; does **not**
+      catch structural duplication (see prompt.md Backlog).
 - [ ] **v0.6** — Full-length practice test assembly (real blueprint, timed sections).
 - [ ] **v0.7** — Scaled score conversion (120-180).
 - [ ] **v0.8** — Deploy so friend can access it online.

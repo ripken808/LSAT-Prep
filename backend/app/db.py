@@ -4,6 +4,8 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Iterator
 
+import numpy as np
+
 from app.config import DB_PATH
 
 SCHEMA = """
@@ -39,6 +41,17 @@ CREATE TABLE IF NOT EXISTS attempts (
     explanation_viewed INTEGER NOT NULL DEFAULT 0,
     answered_at TEXT NOT NULL,
     FOREIGN KEY (question_id) REFERENCES questions(id)
+);
+
+-- Embedding cache for the near-duplicate check. Keyed by a hash of the embedded
+-- text, NOT by question_id: the seed script wipes and reinserts questions with
+-- fresh autoincrement ids, so an id-keyed cache would be invalidated on every
+-- reseed. Content-addressing also means identical text is embedded once.
+CREATE TABLE IF NOT EXISTS embeddings (
+    content_hash TEXT PRIMARY KEY,
+    model TEXT NOT NULL,
+    vector BLOB NOT NULL,
+    created_at TEXT NOT NULL
 );
 """
 
@@ -223,6 +236,46 @@ def insert_attempt(
         ),
     )
     return cursor.lastrowid
+
+
+def get_cached_embeddings(
+    conn: sqlite3.Connection, content_hashes: list[str], model: str
+) -> dict[str, np.ndarray]:
+    """{content_hash: vector} for whichever of these hashes are already cached
+    for this model. Missing hashes are simply absent from the result."""
+    if not content_hashes:
+        return {}
+
+    placeholders = ", ".join("?" for _ in content_hashes)
+    rows = conn.execute(
+        f"""
+        SELECT content_hash, vector FROM embeddings
+        WHERE model = ? AND content_hash IN ({placeholders})
+        """,
+        [model, *content_hashes],
+    ).fetchall()
+
+    return {
+        row["content_hash"]: np.frombuffer(row["vector"], dtype=np.float32)
+        for row in rows
+    }
+
+
+def store_embedding(
+    conn: sqlite3.Connection, content_hash: str, model: str, vector: np.ndarray
+) -> None:
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO embeddings (content_hash, model, vector, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            content_hash,
+            model,
+            vector.astype("float32").tobytes(),
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
 
 
 def get_overall_stats(conn: sqlite3.Connection) -> sqlite3.Row:

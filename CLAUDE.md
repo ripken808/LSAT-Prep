@@ -146,11 +146,15 @@ log is a narrative for humans; the reconstruction prompt is a rebuild spec.
   - Frontend: Next.js 16 (App Router, TypeScript, `frontend/`) — chosen up
     front (v0.1) over a throwaway static page since a timed-test UI (v0.6)
     will need real client state anyway.
-- **Database:** SQLite via Python's stdlib `sqlite3` (no ORM) — deliberately
-  minimal for now; `backend/app/db.py` is a thin data-access layer designed
-  to be swapped for PostgreSQL + pgvector when v0.5 (dedup) actually needs
-  vector similarity search. Don't add SQLAlchemy/an ORM before that need is
-  real.
+- **Database:** SQLite via Python's stdlib `sqlite3` (no ORM). This note used
+  to say the layer was designed to be swapped for PostgreSQL + pgvector "when
+  v0.5 (dedup) actually needs vector similarity search." **v0.5 shipped and
+  that need did not materialize — pgvector is deferred indefinitely.** The
+  whole bank is 52 vectors; similarity is a numpy dot product over a 52x384
+  matrix, sub-millisecond, no server. Vectors are cached in an `embeddings`
+  table as float32 BLOBs. Revisit Postgres only when the bank is orders of
+  magnitude larger, not on the next dedup change. Don't add SQLAlchemy/an ORM
+  before that need is real either.
 - **LLM:** Anthropic API (`anthropic` Python SDK, `backend/app/generation.py`)
   — generates original Logical Reasoning questions. Gated behind
   `GENERATION_MODE=live` (see `backend/app/config.py`); defaults to
@@ -193,7 +197,7 @@ lsat-prep/
                        works for LR and RC), POST /api/generate (gated
                        behind GENERATION_MODE=live), GET /api/stats/summary
       db.py         - sqlite3 connection/schema (questions, passages,
-                       attempts tables)
+                       attempts, embeddings tables)
       models.py     - Pydantic request/response models
       config.py     - env loading (ANTHROPIC_API_KEY, GENERATION_MODE, DB_PATH)
       generation.py - live generate -> independent re-solve -> retry pipeline
@@ -202,15 +206,21 @@ lsat-prep/
       mock_questions.py - hand-authored static LR questions for
                        GENERATION_MODE=mock (42 questions: 3 per each of the
                        14 official LR types)
+      similarity.py - near-duplicate detection: text-to-embed selection,
+                       cosine similarity, pair ranking. Model import is lazy,
+                       so importing this module never pulls PyTorch.
       rc_content.py - hand-authored RC passages + questions (same
                        verification method as LR)
     scripts/
       generate_question.py - seeding CLI (mock or live), seeds LR + RC
       export_prep_txt.py   - regenerates prep.txt from mock_questions.py +
                        rc_content.py (run after authoring any new question)
+      check_duplicates.py  - near-duplicate report over the question bank
+                       (needs the optional `dedup` extra)
     tests/          - pytest: test_grading.py, test_stats.py,
-                       test_reading_comp.py, test_filtering.py (no live API
-                       calls) — 22 tests
+                       test_reading_comp.py, test_filtering.py,
+                       test_similarity.py (no live API calls, and no model
+                       download — the suite runs without PyTorch) — 36 tests
     data/           - sqlite file (gitignored)
   frontend/         - Next.js 16 (App Router, TypeScript), npm-managed
     app/
@@ -286,6 +296,11 @@ lsat-prep/
   (regenerates `prep.txt` at the repo root from `mock_questions.py` +
   `rc_content.py` — see Workflow Notes, run this after authoring any new
   question)
+- **Check for near-duplicate questions:**
+  `cd backend && uv run --extra dedup python scripts/check_duplicates.py`
+  (`--top N` to see the N closest pairs regardless of threshold). Requires the
+  optional `dedup` extra — `uv sync --extra dedup` — which pulls PyTorch
+  (~790MB venv). Deliberately optional: the app and the test suite never need it.
 - **Run tests:** `cd backend && uv run pytest`
 - **Lint:** not configured yet.
 - **Build (frontend):** `cd frontend && npm run build` — run and passing as of
@@ -350,6 +365,16 @@ lsat-prep/
   data, so every `prep.txt` entry automatically includes the reasoning as
   long as the source question does. Never hand-edit `prep.txt` directly —
   it's a derived export and gets overwritten.
+- **After authoring, also run the near-duplicate check** (v0.5):
+  `cd backend && uv run --extra dedup python scripts/check_duplicates.py`.
+  It reports question pairs that are too close in wording. Know what it does
+  and does not catch before trusting it: it measures **topic and phrasing**
+  similarity, so it finds questions drifting toward each other in language,
+  but it does **not** detect shared *structure* — the v0.3 tells (answer-letter
+  skew, answer-length, per-type answer architecture) are a different problem
+  and are documented in the `lsat-methodology` skill. Same-passage RC pairs
+  score high by design and are annotated `[same passage — expected]`; they are
+  not duplicates and never fail the check.
 - **Finishing a version — REQUIRED CHECKLIST.** Run this only when a version is
   genuinely, fully complete end-to-end for its stated scope, per the Versioning
   Strategy rules above — never for work-in-progress or partially-complete states.

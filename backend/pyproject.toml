@@ -9,6 +9,16 @@ dependencies = [
     "anthropic>=0.40",
     "python-dotenv>=1.0",
     "pydantic>=2.9",
+    "numpy>=1.26",
+]
+
+# The embedding model is deliberately NOT a core dependency: sentence-transformers
+# pulls PyTorch (~2GB installed), which is far too heavy to require for running the
+# app or the test suite. Only scripts/check_duplicates.py needs it.
+#   install with: uv sync --extra dedup
+[project.optional-dependencies]
+dedup = [
+    "sentence-transformers>=3.0",
 ]
 
 [dependency-groups]

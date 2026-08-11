@@ -9,60 +9,47 @@
 
 ## Current State (overwrite this section each time — don't append)
 
-- **Current version:** v0.3 (filtered practice mode + LR bank expansion) —
-  **complete and verified.** Five versions are now done, in this actual
-  order: v0.4 -> v0.9 -> v0.1 -> v0.2 -> v0.3 (see the Version Plan's Build
-  order column; the numbers are scope IDs, not sequence).
-- **v0.3 final state.** Two halves:
-  1. *Filtering.* `GET /api/taxonomy` returns every question type and content
-     area actually present, with counts, so the UI's options can never drift
-     from the bank. `GET /api/questions/filtered` takes repeated
-     `question_type` / `content_area` params plus an optional `section` and
-     returns the ENTIRE matching set in random order, letting the frontend
-     cycle it without repeats; an empty match is 200 with `total: 0`, not a
-     404. Content area is matched on `COALESCE(q.content_area,
-     p.content_area)` so RC questions inherit their passage's area without a
-     data backfill. New `/focus` page (4th nav tab) drives it. A shared
-     `app/_components/QuestionCard.tsx` was extracted and all three practice
-     pages now use it instead of triplicating the question card.
-  2. *Bank expansion.* LR grew from 14 to **42 questions, 3 per each of the
-     14 official types**, because filtering to one type previously returned a
-     pool of one. Total bank is now 52 (42 LR + 10 RC).
-- **Verification actually performed** (not taken on trust): 31 questions
-  through a blind re-solve (fresh subagent sees no key) — 31/31 agreed — then
-  an adversarial distractor pass on all 31. After editing, 19 questions were
-  re-solved blind a third time; all 19 still agreed. 22/22 pytest green,
-  `tsc --noEmit` and `npm run build` clean, and the `/focus` flow walked
-  end-to-end in a real browser with zero console errors.
-- **Defects the adversarial pass caught and that are now fixed:** a
-  double-key inference item (the exclusive disjunction made a "wrong" answer
-  strictly derivable); a sufficient-assumption stimulus that never
-  established its subject was a technician, so the key was not strictly
-  sufficient; an evaluate-the-argument premise that granted half of its own
-  correct answer ("similarly designed intersections"); a strengthen item
-  whose "irrelevant" distractor actually removed a real confound; a
-  necessary-assumption key made too strong by a stray "throughout the year";
-  and an "a especially" typo that also desynced a choice from its stimulus.
-- **Two bank-level tells found and fixed.** Neither was visible per question;
-  both defeated the non-memorizable requirement:
-  - Answer letter distribution had drifted to B=24/42 (57%). Rebalanced by
-    swapping choice pairs and remapping the explanations' letter references,
-    to A=9 B=8 C=10 D=8 E=7.
-  - **The correct answer was the longest of its five choices in 76% of
-    questions** (random baseline ~20%) — a student could score most of the
-    bank by picking the longest option without reading the stimulus. Reduced
-    to 57%, with the worst margin down from 118 characters to 38, so the
-    residual is mostly 1-2 character noise. This defect predated v0.3 and
-    affected v0.1's original questions too.
-- **Repo status:** v0.1, v0.2, v0.4, v0.9 are pushed and tagged on
-  `github.com/ripken808/LSAT-Prep`. v0.3 is being presented for confirmation
-  now; nothing for it has been committed, tagged, or pushed yet.
+- **Current version:** v0.5 (near-duplicate detection) — **complete, with a
+  documented limitation.** Six versions done, in this actual order:
+  v0.4 -> v0.9 -> v0.1 -> v0.2 -> v0.3 -> v0.5.
+- **v0.5 final state.** `app/similarity.py` (text selection, cosine similarity,
+  pair ranking; model import is lazy), an `embeddings` cache table keyed by
+  content hash rather than question id (so it survives the seed script's
+  wipe-and-reinsert), and `scripts/check_duplicates.py`, which reads the
+  canonical source files and reports the closest pairs. Local embeddings
+  (`BAAI/bge-small-en-v1.5`) behind an optional `dedup` extra: no API key, no
+  spend, and `uv run pytest` passes with PyTorch not installed (verified).
+  36 tests, up from 22.
+- **What it does NOT do — state this before trusting it.** v0.5 was motivated by
+  the near-duplicate cluster v0.3's adversarial pass found (LR 0/14/15). It does
+  not catch it. Measured: those pairs rank **79th, 216th and 382nd of 861** LR
+  pairs, at 0.673 / 0.623 / 0.579, well under the 0.80 threshold. No threshold
+  fixes this — the three questions are about security cameras, museum finances
+  and bike-share, so they genuinely differ in topic and wording, which is all
+  cosine similarity measures. Their duplication is *architectural* (every key
+  the only hedged choice, every trap the only absolute one). That needs a
+  structural fingerprint, logged to Backlog with the measurements.
+- **What it does catch.** Same-type questions converging in phrasing — the top
+  LR pairs are 18/19 parallel_reasoning (0.814), 40/41 role_of_statement
+  (0.804), 2/18 parallel_reasoning (0.800). Real signal, just not the signal
+  v0.5 was aimed at. Same-passage RC pairs score 0.85-0.90 by design; they are
+  annotated `[same passage — expected]` and never fail the check.
+- **Two bugs found and fixed during the build, both silent-failure class:**
+  embedding the RC passage made every question sharing a passage score
+  **exactly 1.000** (a ~555-token passage both dwarfs a ~60-token stem and
+  overflows the first-choice model's 256-token limit, so only passage text ever
+  reached the model); and the bank's longest question, at 271 tokens, exceeded
+  that same limit. Fixes: passages are no longer embedded, the model moved to
+  one with a 512-token context, and `embed()` now raises rather than letting
+  truncation pass silently.
+- **Repo status:** v0.1, v0.2, v0.3, v0.4, v0.9 are pushed and tagged on
+  `github.com/ripken808/LSAT-Prep`. v0.5 is being presented for confirmation
+  now; nothing for it has been committed, tagged, or pushed.
 - **Branch:** main
-- **Blockers:** none. Open decisions: what to build 6th (v0.5 dedup, v0.6
-  timed test — which is now unblocked, since v0.3 supplied the type/area
-  selection it depends on — or the question-quality Backlog items), and
-  whether to spend a session on the "too_easy" distractor rewrites the
-  adversarial pass itemized.
+- **Blockers:** none. Open decisions: whether to build the structural tell
+  checker (the thing v0.5 aimed at and missed), and whether v0.6's timed test
+  ships at reduced section sizes — the bank has 42 LR and 10 RC against a real
+  blueprint needing ~50 LR and ~27 RC.
 
 ---
 
@@ -94,7 +81,7 @@
 | v0.2    | **REDUCED STARTER SCOPE 2026-08-09.** Add Reading Comprehension: hand-authored, independently-verified passages + questions (same method as v0.1's revised approach — no live API). New `passages` table + `passage_id` FK; new RC question-type taxonomy (10 types); `GET /api/passage/random` (passage + all its questions); reuses existing grade endpoint. Started at 2 passages (law, natural_science) x 5 questions instead of the originally proposed 4 passages x 5 — deliberately smaller to validate the approach first; more content areas can be added the same way later (see Backlog). No Analytical Reasoning — not part of the current real LSAT (removed Aug 2024). | [x] DONE — 2026-08-09. 2 passages, 10 RC questions, 10/10 independently verified; re-verified in Session 8 (13/13 pytest, live API smoke test, `tsc --noEmit` + `npm run build` clean) | **Written 4th, completed 4th** — tag `v0.2`, 2026-08-09. Built on top of finished v0.4 + v0.9, so it reused their CSS classes rather than adding any. |
 | v0.3    | **REVISED 2026-08-10.** Filtered practice mode: `GET /api/taxonomy` (types + content areas with live counts) and `GET /api/questions/filtered` (multi-select by section/type/content area, whole matching set returned in random order), plus a `/focus` page that cycles the filtered set. Metadata tagging — the original half of this version's scope — was already satisfied by v0.1/v0.2 and needed no work. Scope was **extended** to expand the LR bank from 1 to **3 questions per type (42 total, 28 new)**, because filtering to a single type otherwise returned a pool of one. Includes a strengthened two-pass verification protocol and bank-level tell removal. | [x] DONE — 2026-08-10 | **Written 5th, completed 5th.** 42 LR + 10 RC = 52 questions. 31 questions verified by blind re-solve + adversarial distractor pass; 19 re-verified again after editing. |
 | v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [x] DONE — 2026-08-09, visually confirmed via Playwright screenshots | **Written 2nd, completed 1st** — the first version ever finished. Tag `v0.4` = `6725b0b`, 2026-08-09 18:35. Built on top of an *incomplete* v0.1. |
-| v0.5    | Uniqueness/dedup check via vector DB                                                                                                                                                                                                                                   | [ ] not started | Not started, order undecided. |
+| v0.5    | **REVISED 2026-08-10.** Near-duplicate detection over the question bank: `app/similarity.py` (text selection, cosine similarity, pair ranking, lazy model load), an `embeddings` cache table keyed by content hash, and `scripts/check_duplicates.py` reporting the closest pairs. Local embeddings (`BAAI/bge-small-en-v1.5`) behind an optional `dedup` extra — no API key, no spend, and the app and test suite never need PyTorch. Rescoped from "gate live generation" to an **authoring-time** check, because the app has no runtime generation to gate. No Postgres/pgvector. | [x] DONE — 2026-08-10. Reports pairs; caches by content hash. **Does not detect the structural/architectural duplication that motivated it — see the Backlog item and Session 10.** | **Written 6th, completed 6th** — tag `v0.5`, 2026-08-10. |
 | v0.6    | Full-length practice test assembly (real blueprint: 2 LR + 1 RC, correct question counts, timed sections)                                                                                                                                                              | [ ] not started | Not started. **Hard dependency on v0.3** (type/content-area filtering) — cannot be built before it regardless of numbering. |
 | v0.7    | Scaled score conversion (120-180)                                                                                                                                                                                                                                      | [ ] not started | Not started, order undecided. Depends on v0.6 existing to score against. |
 | v0.8    | Deploy so friend can access it online                                                                                                                                                                                                                                  | [ ] not started | Not started, order undecided — and note v0.9 (numbered *after* it) is already done, so this number in particular implies nothing about sequence. |
@@ -113,20 +100,21 @@
       `.claude/commands/` to `.gitignore` as personal local slash commands.
 - [x] v0.3 chosen and built 5th: filtered practice mode plus the LR bank
       expansion to 3 questions per type.
-- [ ] Decide what gets built 6th. v0.6 (full-length timed test) is now
-      unblocked — it needed v0.3's type/content-area selection, which exists —
-      and is the user's oldest outstanding request ("a full test prep with a
-      timer"). Alternatives: v0.5 (dedup), expanding RC content to
-      social_science/humanities, or a focused question-quality session.
-- [ ] Scope v0.6 properly before building: section counts and timing per the
-      real blueprint (2 LR sections of 24-26 questions, 1 RC section of 26-28
-      across 4 passages, 35 minutes each). Note the current bank holds 42 LR
-      and 10 RC questions, which is not enough for a full-blueprint test —
-      decide whether v0.6 ships with reduced section sizes or waits on more
-      content.
-- [ ] Consider a question-quality session against the itemized Backlog
-      findings: the "too_easy" distractor rewrites, the residual answer-length
-      tell, and the `MOCK_QUESTIONS[2]` exemplar contamination.
+- [x] v0.5 built 6th: near-duplicate detection over the question bank.
+- [ ] Decide whether to build the **structural tell checker** — the defect v0.5
+      set out to catch and provably does not (see Backlog, with measurements).
+      The v0.3 tell measurements (answer-letter distribution, answer-length,
+      per-type answer architecture) already exist as a manual checklist in the
+      `lsat-methodology` skill; automating them into `check_tells.py` alongside
+      `check_duplicates.py` is a small, well-specified version.
+- [ ] Scope v0.6 (full-length timed test): 2 LR sections of 24-26 and 1 RC
+      section of 26-28 across 4 passages, 35 minutes each. **The bank holds 42
+      LR and 10 RC** — RC is the binding constraint at roughly a third of one
+      section, so decide whether v0.6 ships with reduced section sizes or waits
+      on RC content expansion.
+- [ ] Remaining Backlog: the too-easy distractor rewrites, the residual
+      answer-length tell, `MOCK_QUESTIONS[2]` exemplar contamination, the two
+      `/progress` bugs (orphaned attempts, UTC date bucketing).
 
 ## Backlog (out-of-scope for current version — don't build yet)
 
@@ -160,6 +148,31 @@
       or an over-strong key.~~ **RESOLVED in v0.3** — the adversarial distractor
       pass now runs on every new question and is documented in the
       `lsat-methodology` skill. LR question 1's over-strong key was rewritten.
+- [ ] **FOOTGUN: schema changes silently empty the app (2 incidents).** The
+      schema uses `CREATE TABLE IF NOT EXISTS`, so it never alters an existing
+      database — adding a table means deleting `backend/data/lsat_prep.db` and
+      **reseeding**. Skip the reseed and the app comes up with a valid, empty DB
+      and reports "No question has been generated yet." Hit in Session 6 (adding
+      `passages`) and again in Session 10 (adding `embeddings`). Fix is small:
+      have the app log a warning at startup when `questions` is empty, or add a
+      `--check` flag to the seed script. Recovery is always
+      `cd backend && uv run python scripts/generate_question.py`.
+- [ ] **STRUCTURAL DUPLICATION — the defect v0.5 set out to catch and did not
+      (measured 2026-08-10).** v0.5's embedding check ranks the known LR 0/14/15
+      near-duplicate cluster at **79th, 216th, and 382nd of 861 LR pairs**
+      (similarities 0.673 / 0.623 / 0.579) — far below its 0.80 threshold. This
+      is not a tuning problem and no threshold fixes it: those three questions
+      are about security cameras, museum finances, and bike-share, so they are
+      genuinely dissimilar *in topic and wording*, which is all cosine
+      similarity over text measures. What makes them duplicative is **answer
+      architecture** — all three keys were the only hedged choice and all three
+      traps the only absolute one, so "pick the hedged one" scored 3/3. Fix
+      needs a different tool: a structural fingerprint over
+      (question_type, answer wording shape, argument form), or simply
+      generalizing the v0.3 tell measurements (letter distribution,
+      answer-length, per-type architecture) into a `check_tells.py` that runs
+      alongside `check_duplicates.py`. The measurements already exist as a
+      checklist in the `lsat-methodology` skill; nothing automates them.
 - [ ] **QUALITY, still open after v0.3:** the adversarial pass rated roughly a
       third of items "too_easy" (all four distractors dismissible on sight) and
       supplied concrete per-question rewrite suggestions — see the Session 9 log
@@ -208,6 +221,11 @@
 | 2026-08-09   | RC question types prefixed `rc_` (e.g. `rc_main_point`) even where conceptually similar to an LR type name | Keeps LR and RC fully distinct in the schema and in `/progress`'s accuracy-by-type breakdown — an LR "main point" question and an RC "main point" question aren't really the same skill, and prefixing avoids needing to touch v0.4's already-shipped stats query/model to disambiguate by section. |
 | 2026-08-09   | RC practice flow is a separate `/reading-comp` page (passage read once, then its questions answered in sequence), not merged into LR's per-question-random flow | Real RC practice means reading a passage once and answering several questions about it in a row, not re-fetching/re-reading the same passage repeatedly under random per-question selection. Keeping LR (`/`) and RC (`/reading-comp`) as separate flows avoided restructuring the already-shipped LR page at all — pure addition. |
 | 2026-08-09   | Added `prep.txt` (repo root) as a derived, regeneratable export of the full question bank, plus a standing CLAUDE.md rule to regenerate it after authoring any new question | User wants a plain-text study file that's always in sync. Regenerating from the canonical source files (`mock_questions.py`, `rc_content.py`) via a script avoids the drift risk of manually appending to the file by hand. |
+| 2026-08-10   | v0.5 rescoped from a runtime gate on generation to an authoring-time check over the hand-authored bank | Its stated job was gating generated questions, but the app has no runtime generation — the live pipeline in `generation.py` has never been run, so a runtime gate would be infrastructure with no traffic. The bank itself, however, is unmeasured, and v0.3's adversarial pass had already found near-duplicates in it. User chose the authoring-time scope. |
+| 2026-08-10   | Local embeddings behind an OPTIONAL `dedup` extra; numpy promoted to a core dependency | Anthropic has no embeddings endpoint (checked against the current API surface via the `claude-api` skill), so this meant either a second vendor or a local model; user chose local. `sentence-transformers` pulls PyTorch — the venv goes from ~90MB to **790MB**, which is far too heavy to require for running the app or the tests. Making it an extra keeps `uv run pytest` working with no PyTorch installed (verified). I had told the user "~90MB model" when asking; that was the model file, not the dependency, and the correction is recorded here. |
+| 2026-08-10   | Embedding model is `BAAI/bge-small-en-v1.5` (512-token context), not the obvious `all-MiniLM-L6-v2` | MiniLM truncates at 256 tokens. The bank's longest question — a parallel-reasoning item whose five choices are each full arguments — is 271 tokens, so it would have been silently cut. bge-small gives ~2x headroom at the same 384 dimensions. `embed()` now raises on any text over the model's limit rather than letting truncation pass silently. |
+| 2026-08-10   | RC passages are deliberately NOT embedded | Two RC questions about one passage are intentionally different questions about shared material, not duplicates. Embedding the passage failed in two compounding ways: a ~555-token passage dwarfs a ~60-token stem, and it overflowed MiniLM's 256-token limit, so the embedded text was the first 256 tokens of the passage and nothing else — every question sharing a passage scored **exactly 1.000** and the stems never reached the model. A question's identity is its stimulus (LR), stem, and choices. |
+| 2026-08-10   | pgvector deferred indefinitely; CLAUDE.md's "swap when v0.5 needs it" note rewritten | 52 vectors is a numpy dot product over a 52x384 matrix — sub-millisecond, no server, no new infrastructure. Leaving the old note would have had the next session standing up Postgres for a prototype's 52 rows. |
 | 2026-08-09   | Corrected every `2026-08-10` date in this file to `2026-08-09` (Sessions 4-7 headers, 8 Key Decisions rows, the Reconstruction Prompts Index, and two Version Plan scope cells) | Every commit in the repo is dated 2026-08-09 (`git log`), so Sessions 4-7 could not have happened on the 10th. Root cause: `prep.txt`'s generated header reads `2026-08-10T02:36:54+00:00`, which is **UTC** — 19:36 PDT on 08-09 — and that UTC date got copied into the log as if it were the local session date. Sessions 1-3 correctly used local dates, so local is the convention. `prep.txt` itself was NOT changed: it's a derived export and its UTC timestamp is accurate. |
 | 2026-08-09   | Version numbers are stable scope IDs, not build order; added an explicit "Build order" column to the Version Plan instead of renumbering | User noticed v0.2's RC page reuses v0.9's CSS classes, which is only possible if v0.9 was built first — correctly inferring the table's sequential look was misleading. True order: v0.4 and v0.9 completed 1st/2nd (`6725b0b`), v0.1 3rd (`7f6cbd3`), v0.2 4th. Renumbering was rejected because `v0.1`/`v0.4`/`v0.9` are annotated tags already pushed to GitHub and every reconstruction prompt cross-references those numbers — renaming would invalidate published history to fix a presentation problem. An explicit column keeps the record honest at zero cost to history. |
 
@@ -225,6 +243,7 @@
 | 3rd              | v0.1    | 2026-08-09 19:06 | `7f6cbd3`     | Session 5 entry below          |
 | 4th              | v0.2    | 2026-08-09       | tag `v0.2`    | Session 6 entry below    |
 | 5th              | v0.3    | 2026-08-10       | tag `v0.3`    | Session 9 entry below    |
+| 6th              | v0.5    | 2026-08-10       | tag `v0.5`    | Session 10 entry below   |
 
 Note on ordering: the completion order above is NOT the version-number order
 — see the Version Plan's Build order column for the full explanation. v0.1
@@ -240,6 +259,144 @@ so a prompt does not correspond to the full contents of its tagged commit.
 ## Session Log
 
 > Newest entry at the top. Tag each entry with the version it belongs to.
+
+### [v0.5] Session 10 — 2026-08-10 (near-duplicate detection)
+
+**Prompt(s) used:**
+
+```
+lets move onto v0.5
+[plan mode; two scoping decisions via AskUserQuestion: authoring-time check
+over the existing bank rather than a runtime gate on generation, and local
+embeddings rather than a hosted API]
+```
+
+**What was done:**
+
+- **Rescoped v0.5 before building.** Its stated job was gating generated
+  questions for uniqueness, but the app has no runtime generation — the live
+  pipeline has still never been run — so a runtime gate would be infrastructure
+  with no traffic. The bank itself is unmeasured, and v0.3 had already found
+  near-duplicates in it, so the user chose an authoring-time check.
+- **Confirmed Anthropic has no embeddings endpoint** by loading the `claude-api`
+  skill rather than answering from memory. That made "embeddings" mean either a
+  second vendor or a local model; the user chose local.
+- Built `app/similarity.py` (text selection, sha256 content hashing, cosine
+  matrix, pair ranking, lazy model load), an `embeddings` cache table in
+  `db.py`, `scripts/check_duplicates.py`, and `tests/test_similarity.py`
+  (14 tests). 36 tests total.
+- **Kept PyTorch out of the critical path.** `sentence-transformers` is an
+  optional `dedup` extra; numpy is core. Verified `uv run pytest` passes with
+  torch not installed. The venv goes from ~90MB to 790MB *with* the extra —
+  which is why it is not a core dependency.
+
+**What broke / what to watch:**
+
+- **The version does not do the thing that motivated it, and this is measured,
+  not suspected.** The LR 0/14/15 cluster ranks 79th, 216th and 382nd of 861 LR
+  pairs (0.673 / 0.623 / 0.579), well below the 0.80 threshold. No threshold
+  fixes it: those questions differ genuinely in topic and wording, and that is
+  all cosine similarity measures. Their duplication is architectural. Logged to
+  Backlog with the numbers rather than declared a success.
+- **Two silent-failure bugs found and fixed mid-build.** Embedding the RC
+  passage made every question sharing a passage score *exactly 1.000* — the
+  ~555-token passage both dwarfs the ~60-token stem and overflows
+  all-MiniLM-L6-v2's 256-token limit, so the embedded text was the first 256
+  tokens of the passage and the stems never reached the model at all. Separately,
+  the bank's longest question (271 tokens) exceeded that same limit. Fixed by
+  not embedding passages, moving to a 512-token model, and making `embed()`
+  raise on over-length input instead of truncating quietly.
+- The first fix was caught only because the scores were suspiciously *exactly*
+  1.000. Worth remembering: an embedding pipeline fails silently by default.
+
+**Next session should:**
+
+- Decide on the structural tell checker (Backlog) — it is the piece that
+  actually addresses the memorizability requirement, and it is small.
+- Or scope v0.6, noting the RC content shortfall against a real blueprint.
+
+**Reconstruction prompt — v0.5 (near-duplicate detection):**
+
+```
+Rebuild this project (LSAT Prep) to v0.5's state. Everything in the v0.1, v0.2
+and v0.3 reconstruction prompts, PLUS an authoring-time near-duplicate check.
+(v0.4's dashboard and v0.9's theme are separate completed versions layered on
+top in real project history.)
+
+SCOPE NOTE: v0.5's original Version Plan entry said "uniqueness/dedup check via
+vector DB," written when generation was expected to run live. It does not: all
+52 questions are hand-authored and the pipeline in app/generation.py has never
+been run. So this is an authoring-time report over the bank, NOT a runtime gate,
+and NOT a Postgres/pgvector migration.
+
+DEPENDENCIES:
+- numpy: core dependency.
+- sentence-transformers: an OPTIONAL extra named `dedup`, because it pulls
+  PyTorch and takes the venv from ~90MB to ~790MB. The app and the whole test
+  suite must run with torch absent — verify this, don't assume it.
+  Install for the check with: uv sync --extra dedup
+
+app/similarity.py:
+- EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5" (512-token context, 384 dims).
+  Do NOT use all-MiniLM-L6-v2: it truncates at 256 tokens and the bank's
+  longest question (a parallel-reasoning item whose five choices are each full
+  arguments) is 271 tokens, so it would be silently cut.
+- question_text(question): stimulus (LR only — RC carries stimulus=None), stem,
+  and choices, newline-joined. The RC passage is deliberately EXCLUDED. Two RC
+  questions about one passage are intentionally different questions about
+  shared material, not duplicates. Including the passage fails twice over: a
+  ~555-token passage dwarfs a ~60-token stem, AND it overflows the token limit,
+  so the embedded text becomes the first N tokens of the passage and nothing
+  else — every question sharing a passage scores exactly 1.000 and the stems
+  never reach the model. If you see exactly 1.000, this is why.
+- content_hash(text): sha256. Cache key.
+- embed(texts): lazy-imports SentenceTransformer inside the function so
+  importing this module never pulls torch; raises a clear ImportError naming
+  the extra if it is missing. MUST raise ValueError on any text longer than
+  model.max_seq_length rather than letting truncation happen silently.
+- cosine_matrix(vectors): row-normalize (zero-norms set to 1 so zero vectors
+  give 0, not NaN), then V @ V.T.
+- rank_pairs(vectors, labels, threshold): upper-triangle pairs only, sorted
+  descending. Pure numpy — this is what the tests exercise.
+
+app/db.py — add an `embeddings` table: content_hash TEXT PRIMARY KEY, model
+TEXT, vector BLOB, created_at. Keyed by content hash, NOT question_id: the seed
+script wipes and reinserts questions with fresh autoincrement ids, so an
+id-keyed cache would die on every reseed. get_cached_embeddings(conn, hashes,
+model) and store_embedding(...); float32 via .tobytes() / np.frombuffer.
+Scope lookups by model so swapping models cannot reuse stale vectors.
+
+scripts/check_duplicates.py — reads the CANONICAL SOURCE FILES
+(app.mock_questions.MOCK_QUESTIONS, app.rc_content.RC_QUESTIONS), not the DB.
+Embeds only uncached text. Flags: --threshold (default 0.80), --fail-over
+(default 0.95, exits 1), --top N. Annotates same-passage RC pairs
+"[same passage — expected]" and excludes them from the failure gate — they
+score 0.85-0.90 by design and are not duplicates.
+
+tests/test_similarity.py — must NEVER call embed() or import
+sentence_transformers; feed hand-built vectors to the pure functions. Cover
+identical/orthogonal/zero vectors, magnitude invariance, pair ordering, each
+pair once and never self, threshold filtering, that question_text excludes the
+passage, and the SQLite BLOB round trip including model scoping.
+
+KNOWN LIMITATION — DO NOT PRESENT THIS AS SOLVED. This catches questions that
+converge in TOPIC AND WORDING. It does NOT catch structural duplication. On the
+real bank the known LR 0/14/15 near-duplicate cluster ranks 79th, 216th and
+382nd of 861 LR pairs (0.673 / 0.623 / 0.579) — far below threshold, and no
+threshold fixes it, because those questions are about security cameras, museum
+finances and bike-share and are genuinely dissimilar in wording. What makes
+them duplicative is answer architecture (each key the only hedged choice, each
+trap the only absolute one). That needs a structural fingerprint, which v0.5
+does not build.
+
+NOT YET IMPLEMENTED as of v0.5: the structural tell checker described above;
+full-length timed test assembly (v0.6 — and note the bank holds 42 LR / 10 RC
+against a blueprint needing ~50 LR / ~27 RC); scaled scoring (v0.7); deployment
+(v0.8). The live Anthropic generate/verify pipeline still exists and has still
+never been run.
+```
+
+---
 
 ### [v0.3] Session 9 — 2026-08-10 (filtered practice + LR bank expansion)
 
