@@ -47,6 +47,46 @@ class FilteredQuestions(BaseModel):
     questions: list[QuestionPublic]
 
 
+class TestSection(BaseModel):
+    kind: str
+    label: str
+    minutes: int
+    passages: list[PassagePublic]
+    questions: list[QuestionPublic]
+
+
+class TestPaper(BaseModel):
+    preset: str
+    sections: list[TestSection]
+    # Where the bank falls short of a real blueprint, stated plainly so the UI
+    # never implies the test is full-length.
+    warnings: list[str]
+
+
+class TestAnswer(BaseModel):
+    question_id: int
+    selected_answer: str | None  # null = left blank, scored incorrect
+
+
+class TestGradeRequest(BaseModel):
+    answers: list[TestAnswer]
+
+
+class TestQuestionResult(BaseModel):
+    question_id: int
+    selected_answer: str | None
+    correct: bool
+    correct_answer: str
+    explanation: str
+
+
+class TestGradeResponse(BaseModel):
+    total: int
+    correct: int
+    answered: int
+    results: list[TestQuestionResult]
+
+
 class GradeRequest(BaseModel):
     selected_answer: str
 

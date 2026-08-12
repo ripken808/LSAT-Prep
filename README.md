@@ -17,7 +17,7 @@ conventions and `prompt.md` for the detailed session-by-session log.
 > check a box off early to look further along than the project actually is.
 >
 > **Version numbers are scope IDs, not build order.** Actual completion order so
-> far: v0.4 → v0.9 → v0.1 → v0.2 → v0.3 → v0.5 (six done). See the Build order
+> far: v0.4 → v0.9 → v0.1 → v0.2 → v0.3 → v0.5 → v0.6 (seven done). See the Build order
 > column in `prompt.md`'s Version Plan for the full record and why the numbers
 > were not renumbered.
 
@@ -39,7 +39,10 @@ conventions and `prompt.md` for the detailed session-by-session log.
       embeddings, cosine similarity, and a `check_duplicates.py` report run
       after authoring. Catches questions converging in wording; does **not**
       catch structural duplication (see prompt.md Backlog).
-- [ ] **v0.6** — Full-length practice test assembly (real blueprint, timed sections).
+- [x] **v0.6** — Full-length timed practice test at `/test`: 3 sections, hard
+      35-minute cutoff each, no feedback until submission, then raw score and
+      per-question review. Ships at **reduced** section sizes (21/21/10) — the
+      bank can't fill a real blueprint yet, and the app says so.
 - [ ] **v0.7** — Scaled score conversion (120-180).
 - [ ] **v0.8** — Deploy so friend can access it online.
 - [x] **v0.9** — Growtopia-inspired visual theme (cosmetic/CSS-only; original
@@ -65,7 +68,8 @@ npm run dev
 ```
 
 Then open `http://localhost:3000` (LR practice), `http://localhost:3000/reading-comp`
-(RC practice), `http://localhost:3000/focus` (drill specific question types), and
+(RC practice), `http://localhost:3000/focus` (drill specific question types),
+`http://localhost:3000/test` (full-length timed test), and
 `http://localhost:3000/progress` (stats dashboard). To use real
 Anthropic-API-generated LR questions instead of the hand-authored set, set
 `GENERATION_MODE=live` and a real `ANTHROPIC_API_KEY` in `backend/.env`, then

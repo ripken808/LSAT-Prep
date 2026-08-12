@@ -195,7 +195,12 @@ lsat-prep/
                        no match), POST /api/question/{id}/grade
                        (deterministic key match + attempts-log side effect,
                        works for LR and RC), POST /api/generate (gated
-                       behind GENERATION_MODE=live), GET /api/stats/summary
+                       behind GENERATION_MODE=live), GET /api/stats/summary,
+                       GET /api/test/new (assemble a timed practice test;
+                       400 with a countable shortfall when the bank can't
+                       fill the preset), POST /api/test/grade (whole-test
+                       batch grading; blank = incorrect, logs an attempt per
+                       answered question)
       db.py         - sqlite3 connection/schema (questions, passages,
                        attempts, embeddings tables)
       models.py     - Pydantic request/response models
@@ -206,6 +211,10 @@ lsat-prep/
       mock_questions.py - hand-authored static LR questions for
                        GENERATION_MODE=mock (42 questions: 3 per each of the
                        14 official LR types)
+      assembly.py   - full-length test assembly: section presets
+                       ("reduced" sized to the bank, "blueprint" the real
+                       thing), no-repeat sampling across the whole paper,
+                       LR spread across question types, RC by whole passage
       similarity.py - near-duplicate detection: text-to-embed selection,
                        cosine similarity, pair ranking. Model import is lazy,
                        so importing this module never pulls PyTorch.
@@ -219,15 +228,19 @@ lsat-prep/
                        (needs the optional `dedup` extra)
     tests/          - pytest: test_grading.py, test_stats.py,
                        test_reading_comp.py, test_filtering.py,
-                       test_similarity.py (no live API calls, and no model
-                       download — the suite runs without PyTorch) — 36 tests
+                       test_similarity.py, test_assembly.py (no live API
+                       calls, and no model download — the suite runs without
+                       PyTorch) — 51 tests
     data/           - sqlite file (gitignored)
   frontend/         - Next.js 16 (App Router, TypeScript), npm-managed
     app/
       _components/  - colocated non-routable UI (Next 16 private-folder
                        convention). QuestionCard.tsx holds the shared
-                       question card + grade-result view used by all three
+                       question card + grade-result view used by all four
                        practice pages, plus the Question/GradeResult types.
+                       Timer.tsx holds useCountdown (deadline-based, so a
+                       backgrounded tab can't hand back time) and the clock
+                       display.
       layout.tsx    - root layout, fonts (Geist + Press Start 2P + Fredoka), nav bar
       globals.css   - theme tokens (light/dark), wood-panel/block-btn/
                        dashboard component styles
@@ -236,6 +249,10 @@ lsat-prep/
       reading-comp/page.tsx - RC practice page: passage pinned in a
                        clean-card while cycling through its questions in
                        sequence, then a new random passage
+      test/page.tsx - /test full-length timed practice test: start screen
+                       (structure + content-gap warnings), timed section
+                       runner with a hard cutoff, between-section break,
+                       raw score and per-question review
       focus/page.tsx - /focus filtered practice: pick question types and/or
                        RC content areas (options + counts come from
                        /api/taxonomy), then cycle the matched set with a

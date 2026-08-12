@@ -3,6 +3,7 @@ import json
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import assembly
 from app.config import GENERATION_MODE
 from app.db import (
     get_attempts_by_day,
@@ -32,6 +33,11 @@ from app.models import (
     QuestionPublic,
     StatsSummary,
     Taxonomy,
+    TestGradeRequest,
+    TestGradeResponse,
+    TestPaper,
+    TestQuestionResult,
+    TestSection,
     TypeCount,
     TypeStats,
 )
@@ -142,6 +148,104 @@ def get_filtered_questions(
 
     questions = [_row_to_public(row) for row in rows]
     return FilteredQuestions(total=len(questions), questions=questions)
+
+
+@app.get("/api/test/new", response_model=TestPaper)
+def new_test(preset: str = Query(assembly.DEFAULT_PRESET)):
+    """Assemble a full-length timed practice test.
+
+    No question appears twice anywhere in the paper. Returns 400 with a
+    countable message when the bank can't fill the requested preset — that is
+    how "blueprint" stays honest instead of silently serving a half-test."""
+    with get_connection() as conn:
+        try:
+            paper = assembly.assemble_test(conn, preset)
+        except assembly.AssemblyError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        warnings = assembly.content_warnings(conn)
+
+    return TestPaper(
+        preset=paper["preset"],
+        warnings=warnings,
+        sections=[
+            TestSection(
+                kind=section["kind"],
+                label=section["label"],
+                minutes=section["minutes"],
+                passages=[
+                    PassagePublic(
+                        id=row["id"],
+                        content_area=row["content_area"],
+                        title=row["title"],
+                        passage_text=row["passage_text"],
+                    )
+                    for row in section["passages"]
+                ],
+                questions=[_row_to_public(row) for row in section["questions"]],
+            )
+            for section in paper["sections"]
+        ],
+    )
+
+
+@app.post("/api/test/grade", response_model=TestGradeResponse)
+def grade_test(body: TestGradeRequest):
+    """Grade a whole test at once.
+
+    Same deterministic key match as single-question grading, and it still logs
+    an attempt per ANSWERED question so a test feeds /progress exactly like
+    ordinary practice. A blank answer is scored incorrect and logs nothing —
+    the real LSAT has no guessing penalty, but a blank is still wrong, and
+    recording a non-attempt would distort accuracy-by-type."""
+    results: list[TestQuestionResult] = []
+    correct_count = 0
+    answered_count = 0
+
+    with get_connection() as conn:
+        for answer in body.answers:
+            row = get_question_by_id(conn, answer.question_id)
+            if row is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Question not found: {answer.question_id}",
+                )
+            if answer.selected_answer is not None and (
+                answer.selected_answer not in VALID_ANSWERS
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"selected_answer must be one of {VALID_ANSWERS} or null",
+                )
+
+            correct = answer.selected_answer == row["correct_answer"]
+            if correct:
+                correct_count += 1
+            if answer.selected_answer is not None:
+                answered_count += 1
+                insert_attempt(
+                    conn,
+                    question_id=answer.question_id,
+                    selected_answer=answer.selected_answer,
+                    correct=correct,
+                    explanation_viewed=True,
+                )
+
+            results.append(
+                TestQuestionResult(
+                    question_id=answer.question_id,
+                    selected_answer=answer.selected_answer,
+                    correct=correct,
+                    correct_answer=row["correct_answer"],
+                    explanation=row["explanation"],
+                )
+            )
+
+    return TestGradeResponse(
+        total=len(body.answers),
+        correct=correct_count,
+        answered=answered_count,
+        results=results,
+    )
 
 
 @app.post("/api/question/{question_id}/grade", response_model=GradeResponse)

@@ -9,47 +9,45 @@
 
 ## Current State (overwrite this section each time — don't append)
 
-- **Current version:** v0.5 (near-duplicate detection) — **complete, with a
-  documented limitation.** Six versions done, in this actual order:
-  v0.4 -> v0.9 -> v0.1 -> v0.2 -> v0.3 -> v0.5.
-- **v0.5 final state.** `app/similarity.py` (text selection, cosine similarity,
-  pair ranking; model import is lazy), an `embeddings` cache table keyed by
-  content hash rather than question id (so it survives the seed script's
-  wipe-and-reinsert), and `scripts/check_duplicates.py`, which reads the
-  canonical source files and reports the closest pairs. Local embeddings
-  (`BAAI/bge-small-en-v1.5`) behind an optional `dedup` extra: no API key, no
-  spend, and `uv run pytest` passes with PyTorch not installed (verified).
-  36 tests, up from 22.
-- **What it does NOT do — state this before trusting it.** v0.5 was motivated by
-  the near-duplicate cluster v0.3's adversarial pass found (LR 0/14/15). It does
-  not catch it. Measured: those pairs rank **79th, 216th and 382nd of 861** LR
-  pairs, at 0.673 / 0.623 / 0.579, well under the 0.80 threshold. No threshold
-  fixes this — the three questions are about security cameras, museum finances
-  and bike-share, so they genuinely differ in topic and wording, which is all
-  cosine similarity measures. Their duplication is *architectural* (every key
-  the only hedged choice, every trap the only absolute one). That needs a
-  structural fingerprint, logged to Backlog with the measurements.
-- **What it does catch.** Same-type questions converging in phrasing — the top
-  LR pairs are 18/19 parallel_reasoning (0.814), 40/41 role_of_statement
-  (0.804), 2/18 parallel_reasoning (0.800). Real signal, just not the signal
-  v0.5 was aimed at. Same-passage RC pairs score 0.85-0.90 by design; they are
-  annotated `[same passage — expected]` and never fail the check.
-- **Two bugs found and fixed during the build, both silent-failure class:**
-  embedding the RC passage made every question sharing a passage score
-  **exactly 1.000** (a ~555-token passage both dwarfs a ~60-token stem and
-  overflows the first-choice model's 256-token limit, so only passage text ever
-  reached the model); and the bank's longest question, at 271 tokens, exceeded
-  that same limit. Fixes: passages are no longer embedded, the model moved to
-  one with a 512-token context, and `embed()` now raises rather than letting
-  truncation pass silently.
-- **Repo status:** v0.1, v0.2, v0.3, v0.4, v0.9 are pushed and tagged on
-  `github.com/ripken808/LSAT-Prep`. v0.5 is being presented for confirmation
-  now; nothing for it has been committed, tagged, or pushed.
+- **Current version:** v0.6 (full-length timed practice test) — **complete.**
+  Seven versions done, in this actual order:
+  v0.4 -> v0.9 -> v0.1 -> v0.2 -> v0.3 -> v0.5 -> v0.6. This closes the user's
+  oldest outstanding request, first asked for in Session 5.
+- **v0.6 final state.** `app/assembly.py` builds a paper from section presets:
+  no question appears twice anywhere in the test, LR is spread across question
+  types rather than randomly drawn, and RC is assembled by whole passage.
+  `GET /api/test/new` serves it with no answers and a `warnings` list;
+  `POST /api/test/grade` grades the whole paper at once, scores blanks as
+  incorrect, and logs an attempt per *answered* question so a test feeds
+  `/progress` like ordinary practice. `/test` runs it: hard 35-minute cutoff per
+  section, free navigation within a section, no right/wrong shown until
+  submission, then raw score plus per-question review. 51 tests, up from 36.
+- **It ships at reduced sizes, and says so.** Sections are 21/21/10 rather than
+  the real 24-26/24-26/26-28, because the bank holds 42 LR and 10 RC across 2
+  passages. A blueprint-accurate test would serve every RC question 2.7 times.
+  The `blueprint` preset exists and returns a 400 naming the shortfall
+  ("need 50, have 42 (short by 8)"), and the start screen states the gap rather
+  than implying the test is full-length.
+- **One bug worth remembering, found in the browser and not by the tests:**
+  `useCountdown` initially used the ordinary useState+useEffect shape, which
+  returns a stale 0 on the first render after a new deadline is set. The caller
+  treats 0 as "time is up", so clicking Start Test ended section 1 instantly.
+  The hook now derives its value during render and carries a comment saying not
+  to simplify it back.
+- **Verified end to end in a real browser** using Playwright's clock control to
+  fast-forward: the timer ticks correctly, each section auto-advances on expiry
+  with no click, the RC section renders its passage beside the question, the
+  final expiry auto-submits, and the score is self-consistent (5 answered, 47
+  blank of 52). Zero console errors.
+- **Repo status:** all seven completed versions are pushed and tagged on
+  `github.com/ripken808/LSAT-Prep` — v0.1, v0.2, v0.3, v0.4, v0.5, v0.6, v0.9.
+  Working tree clean, `main` in sync with origin. Nothing is waiting to be
+  pushed.
 - **Branch:** main
-- **Blockers:** none. Open decisions: whether to build the structural tell
-  checker (the thing v0.5 aimed at and missed), and whether v0.6's timed test
-  ships at reduced section sizes — the bank has 42 LR and 10 RC against a real
-  blueprint needing ~50 LR and ~27 RC.
+- **Blockers:** none. The obvious next candidates are v0.7 (scaled 120-180
+  scoring, which now has a real raw score to convert), v0.8 (deploy), RC content
+  expansion (which would unlock the blueprint preset), or the structural tell
+  checker from v0.5's Backlog.
 
 ---
 
@@ -82,7 +80,7 @@
 | v0.3    | **REVISED 2026-08-10.** Filtered practice mode: `GET /api/taxonomy` (types + content areas with live counts) and `GET /api/questions/filtered` (multi-select by section/type/content area, whole matching set returned in random order), plus a `/focus` page that cycles the filtered set. Metadata tagging — the original half of this version's scope — was already satisfied by v0.1/v0.2 and needed no work. Scope was **extended** to expand the LR bank from 1 to **3 questions per type (42 total, 28 new)**, because filtering to a single type otherwise returned a pool of one. Includes a strengthened two-pass verification protocol and bank-level tell removal. | [x] DONE — 2026-08-10 | **Written 5th, completed 5th.** 42 LR + 10 RC = 52 questions. 31 questions verified by blind re-solve + adversarial distractor pass; 19 re-verified again after editing. |
 | v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [x] DONE — 2026-08-09, visually confirmed via Playwright screenshots | **Written 2nd, completed 1st** — the first version ever finished. Tag `v0.4` = `6725b0b`, 2026-08-09 18:35. Built on top of an *incomplete* v0.1. |
 | v0.5    | **REVISED 2026-08-10.** Near-duplicate detection over the question bank: `app/similarity.py` (text selection, cosine similarity, pair ranking, lazy model load), an `embeddings` cache table keyed by content hash, and `scripts/check_duplicates.py` reporting the closest pairs. Local embeddings (`BAAI/bge-small-en-v1.5`) behind an optional `dedup` extra — no API key, no spend, and the app and test suite never need PyTorch. Rescoped from "gate live generation" to an **authoring-time** check, because the app has no runtime generation to gate. No Postgres/pgvector. | [x] DONE — 2026-08-10. Reports pairs; caches by content hash. **Does not detect the structural/architectural duplication that motivated it — see the Backlog item and Session 10.** | **Written 6th, completed 6th** — tag `v0.5`, 2026-08-10. |
-| v0.6    | Full-length practice test assembly (real blueprint: 2 LR + 1 RC, correct question counts, timed sections)                                                                                                                                                              | [ ] not started | Not started. **Hard dependency on v0.3** (type/content-area filtering) — cannot be built before it regardless of numbering. |
+| v0.6    | **REVISED 2026-08-11.** Full-length timed practice test: `app/assembly.py` (section presets, no-repeat sampling across the whole paper, LR spread across question types, RC assembled by whole passage), `GET /api/test/new`, `POST /api/test/grade` (batch, blank = incorrect), and a `/test` page with a hard 35-minute cutoff per section, free navigation within a section, no feedback until submission, and raw-score + per-question review. **Ships at REDUCED section sizes (21/21/10) because the bank cannot fill a real blueprint** — a `blueprint` preset exists and refuses with a countable shortfall until the content is there. State is in-memory; a reload loses the test. | [x] DONE — 2026-08-11. Verified end to end in a browser including real timer expiry auto-advancing all three sections. | **Written 7th, completed 7th** — tag `v0.6`, 2026-08-11. |
 | v0.7    | Scaled score conversion (120-180)                                                                                                                                                                                                                                      | [ ] not started | Not started, order undecided. Depends on v0.6 existing to score against. |
 | v0.8    | Deploy so friend can access it online                                                                                                                                                                                                                                  | [ ] not started | Not started, order undecided — and note v0.9 (numbered *after* it) is already done, so this number in particular implies nothing about sequence. |
 | v0.9    | Growtopia-inspired visual theme (cosmetic/CSS-only — no grading/generation/data-model changes). Original pixel-chunky UI: wood-panel borders/textures, beveled 3D block buttons, bright saturated palette, applied to nav, buttons, general chrome, and the themed `/progress` dashboard. Press Start 2P reserved for headings/large stat numbers only; a legible rounded sans font for nav links, button labels, and badge text. The question-reading screen (stimulus/stem/choices) stays clean, high-contrast, unstyled by the pixel theme. | [x] DONE — 2026-08-09, visually confirmed via Playwright screenshots | **Written 3rd, completed 2nd** — same commit/tag moment as v0.4 (`6725b0b`, 2026-08-09 18:35), since both were verified together in Session 4. Completed *before* v0.1 and v0.2 despite the highest number. |
@@ -101,20 +99,16 @@
 - [x] v0.3 chosen and built 5th: filtered practice mode plus the LR bank
       expansion to 3 questions per type.
 - [x] v0.5 built 6th: near-duplicate detection over the question bank.
-- [ ] Decide whether to build the **structural tell checker** — the defect v0.5
-      set out to catch and provably does not (see Backlog, with measurements).
-      The v0.3 tell measurements (answer-letter distribution, answer-length,
-      per-type answer architecture) already exist as a manual checklist in the
-      `lsat-methodology` skill; automating them into `check_tells.py` alongside
-      `check_duplicates.py` is a small, well-specified version.
-- [ ] Scope v0.6 (full-length timed test): 2 LR sections of 24-26 and 1 RC
-      section of 26-28 across 4 passages, 35 minutes each. **The bank holds 42
-      LR and 10 RC** — RC is the binding constraint at roughly a third of one
-      section, so decide whether v0.6 ships with reduced section sizes or waits
-      on RC content expansion.
-- [ ] Remaining Backlog: the too-easy distractor rewrites, the residual
-      answer-length tell, `MOCK_QUESTIONS[2]` exemplar contamination, the two
-      `/progress` bugs (orphaned attempts, UTC date bucketing).
+- [x] v0.6 built 7th: full-length timed practice test at reduced section sizes.
+- [ ] Decide what gets built 8th. Live options: **v0.7** (scaled 120-180
+      scoring — v0.6 now produces a raw score to convert, so this is unblocked
+      and small); **v0.8** (deploy, the last core feature and the reason the
+      project exists — a friend can't use localhost); **RC content expansion**
+      (2 passages + ~17 questions, which would unlock v0.6's blueprint preset);
+      or the **structural tell checker** from v0.5's Backlog.
+- [ ] Remaining Backlog: too-easy distractor rewrites, residual answer-length
+      tell, `MOCK_QUESTIONS[2]` exemplar contamination, the two `/progress` bugs
+      (orphaned attempts, UTC date bucketing), and the empty-DB startup warning.
 
 ## Backlog (out-of-scope for current version — don't build yet)
 
@@ -221,6 +215,11 @@
 | 2026-08-09   | RC question types prefixed `rc_` (e.g. `rc_main_point`) even where conceptually similar to an LR type name | Keeps LR and RC fully distinct in the schema and in `/progress`'s accuracy-by-type breakdown — an LR "main point" question and an RC "main point" question aren't really the same skill, and prefixing avoids needing to touch v0.4's already-shipped stats query/model to disambiguate by section. |
 | 2026-08-09   | RC practice flow is a separate `/reading-comp` page (passage read once, then its questions answered in sequence), not merged into LR's per-question-random flow | Real RC practice means reading a passage once and answering several questions about it in a row, not re-fetching/re-reading the same passage repeatedly under random per-question selection. Keeping LR (`/`) and RC (`/reading-comp`) as separate flows avoided restructuring the already-shipped LR page at all — pure addition. |
 | 2026-08-09   | Added `prep.txt` (repo root) as a derived, regeneratable export of the full question bank, plus a standing CLAUDE.md rule to regenerate it after authoring any new question | User wants a plain-text study file that's always in sync. Regenerating from the canonical source files (`mock_questions.py`, `rc_content.py`) via a script avoids the drift risk of manually appending to the file by hand. |
+| 2026-08-11   | v0.6 ships reduced section sizes (21/21/10), not the real blueprint | The blueprint is 2 LR of 24-26 plus RC of 26-28 across 4 passages; the bank holds 42 LR and 10 RC across 2 passages. A blueprint-accurate test would serve every RC question 2.7 times, which is not a practice test. User chose configurable sizes: ship what the bank supports with nothing repeated, keep a `blueprint` preset that refuses with a countable shortfall, and state the gap on the start screen rather than implying full length. |
+| 2026-08-11   | Hard cutoff at 35:00 per section, auto-submit, no return; test state in-memory | Time pressure is most of what makes full-length practice worth doing, so a soft warning would defeat the purpose. Persistence across reload was considered and deferred — it needs a test-session table and resume logic, which is its own version. The start screen says plainly that a reload loses the test. |
+| 2026-08-11   | RC sections are assembled by whole passage, never by sampling N questions | A passage is read once and answered against several times. Sampling questions independently would strand questions whose passage the test never shows. This mirrors how `/reading-comp` already works. |
+| 2026-08-11   | `useCountdown` derives its value during render rather than in an effect | The obvious useState+useEffect shape returns a stale 0 on the first render after a new deadline is set, and the caller treats 0 as "time is up" — so starting a section instantly ended it. Found in the browser, not by the tests. The hook carries a comment saying not to simplify it back. |
+| 2026-08-11   | A blank answer is scored incorrect but logs no attempt row | The real LSAT has no guessing penalty, but a blank is still wrong. Logging a non-attempt would distort `/progress`'s accuracy-by-type, which counts attempts. |
 | 2026-08-10   | v0.5 rescoped from a runtime gate on generation to an authoring-time check over the hand-authored bank | Its stated job was gating generated questions, but the app has no runtime generation — the live pipeline in `generation.py` has never been run, so a runtime gate would be infrastructure with no traffic. The bank itself, however, is unmeasured, and v0.3's adversarial pass had already found near-duplicates in it. User chose the authoring-time scope. |
 | 2026-08-10   | Local embeddings behind an OPTIONAL `dedup` extra; numpy promoted to a core dependency | Anthropic has no embeddings endpoint (checked against the current API surface via the `claude-api` skill), so this meant either a second vendor or a local model; user chose local. `sentence-transformers` pulls PyTorch — the venv goes from ~90MB to **790MB**, which is far too heavy to require for running the app or the tests. Making it an extra keeps `uv run pytest` working with no PyTorch installed (verified). I had told the user "~90MB model" when asking; that was the model file, not the dependency, and the correction is recorded here. |
 | 2026-08-10   | Embedding model is `BAAI/bge-small-en-v1.5` (512-token context), not the obvious `all-MiniLM-L6-v2` | MiniLM truncates at 256 tokens. The bank's longest question — a parallel-reasoning item whose five choices are each full arguments — is 271 tokens, so it would have been silently cut. bge-small gives ~2x headroom at the same 384 dimensions. `embed()` now raises on any text over the model's limit rather than letting truncation pass silently. |
@@ -244,6 +243,7 @@
 | 4th              | v0.2    | 2026-08-09       | tag `v0.2`    | Session 6 entry below    |
 | 5th              | v0.3    | 2026-08-10       | tag `v0.3`    | Session 9 entry below    |
 | 6th              | v0.5    | 2026-08-10       | tag `v0.5`    | Session 10 entry below   |
+| 7th              | v0.6    | 2026-08-11       | tag `v0.6`    | Session 11 entry below   |
 
 Note on ordering: the completion order above is NOT the version-number order
 — see the Version Plan's Build order column for the full explanation. v0.1
@@ -259,6 +259,188 @@ so a prompt does not correspond to the full contents of its tagged commit.
 ## Session Log
 
 > Newest entry at the top. Tag each entry with the version it belongs to.
+
+### [process] Session 12 — 2026-08-12 (session close-out; push policy changed)
+
+**Prompt(s) used:**
+
+```
+/end  — with the command file rewritten to be fully autonomous:
+"execute the full checklist below with no confirmation steps and no questions
+at the end... Push automatically — commit and any tags, with no confirmation
+step, whether the version was complete or WIP. Do not ask before pushing."
+```
+
+**What was done:**
+
+- **The standing push-confirmation rule was deliberately changed by the user.**
+  `.claude/commands/end.md` previously ended with "Always ask before pushing,
+  even for a completed version." It now says the opposite: push automatically,
+  no confirmation, and do not ask a question at the end. That file is
+  gitignored (Session 8 decision), so the change lives only on this machine and
+  will not show up in a fresh clone — worth knowing if the behavior ever seems
+  surprising.
+- Pushed v0.6's commit and annotated tag, which had been sitting local-only
+  from the previous `/end` run under the old ask-first policy.
+- No code changed in this entry. 51 tests still passing, tree clean.
+
+**What broke / what to watch:**
+
+- Nothing broke. One thing to be aware of going forward: `/end` now pushes
+  whatever is committed, including WIP commits, without asking. That is the
+  requested behavior, but it means anything staged at the end of a session goes
+  to GitHub.
+
+**Next session should:**
+
+- Pick the 8th version — see Next Up. v0.7 (scaled scoring) is the small
+  unblocked one; v0.8 (deploy) is the one that makes the project actually
+  usable by its intended audience.
+
+**Reconstruction prompt (only if this session completed a version):**
+
+```
+Not applicable — process/docs only. v0.6's reconstruction prompt is in the
+Session 11 entry below and was written when that version completed.
+```
+
+---
+
+### [v0.6] Session 11 — 2026-08-11 (full-length timed practice test)
+
+> Continued directly from Session 10 in the same working session — the entries
+> are split by version, per this log's convention, not by wall-clock session.
+
+**Prompt(s) used:**
+
+```
+if everything is good for v0.5 please continue to v0.6 after pushing,
+tagging and logging
+[plan mode; two scoping decisions via AskUserQuestion: configurable section
+sizes shipping reduced, and a hard cutoff with in-memory state]
+```
+
+**What was done:**
+
+- Pushed and tagged v0.5 first, then planned v0.6.
+- **Surfaced the content gap before designing anything.** The real blueprint
+  needs ~50 LR and ~27 RC across 4 passages; the bank has 42 LR and 10 RC
+  across 2. A blueprint-accurate test would serve every RC question 2.7 times.
+  The user chose configurable section sizes: ship reduced (21/21/10) with
+  nothing repeated, keep a `blueprint` preset that refuses with a countable
+  shortfall, and state the gap on the start screen.
+- Built `app/assembly.py`, `GET /api/test/new`, `POST /api/test/grade`, a
+  `useCountdown` hook, and the `/test` page (start / section runner / break /
+  results), plus `tests/test_assembly.py` (15 tests, 51 total).
+- Reused rather than rebuilt: `_row_to_public` for no-leak serialization,
+  `insert_attempt` so tests feed `/progress`, `QuestionCard` and
+  `GradeResultView` from v0.3, and the existing theme classes. No new CSS.
+
+**What broke / what to watch:**
+
+- **`useCountdown` ended each section the instant it began.** The ordinary
+  useState+useEffect shape returns a stale 0 on the first render after a new
+  deadline is set, and the caller treats 0 as "time is up". Fixed by deriving
+  the value during render; the hook carries a comment saying not to simplify it
+  back. **The unit tests would never have caught this** — it took driving the
+  real page in a browser.
+- Two smaller self-inflicted issues: pytest tried to collect `TestAssemblyError`
+  as a test class (renamed the module to `app/assembly.py` and the exception to
+  `AssemblyError`), and `assemble_test(seed=...)` wasn't actually reproducible
+  because `get_questions_filtered` returns rows `ORDER BY RANDOM()` — the rows
+  are now sorted before the seeded shuffle.
+- Playwright's `clock.install()` / `fastForward()` is what made testing a
+  35-minute timer practical. Worth reaching for again.
+
+**Next session should:**
+
+- Pick the 8th version. v0.7 (scaled 120-180 scoring) is unblocked and small now
+  that v0.6 produces a raw score to convert. v0.8 (deploy) is the last core
+  feature and the actual point of the project — the friend cannot use
+  localhost. RC content expansion would additionally unlock v0.6's blueprint
+  preset.
+
+**Reconstruction prompt — v0.6 (full-length timed practice test):**
+
+```
+Rebuild this project (LSAT Prep) to v0.6's state. Everything in the v0.1, v0.2,
+v0.3 and v0.5 reconstruction prompts, PLUS a full-length timed practice test.
+
+SCOPE NOTE — READ FIRST: the real LSAT is 2 LR sections of 24-26 plus an RC
+section of 26-28 across 4 passages. The bank holds 42 LR and 10 RC across 2
+passages, so a blueprint-accurate test is impossible without serving RC
+questions ~2.7 times each. This version ships REDUCED section sizes and says so
+in the UI. Do not "fix" this by allowing repeats.
+
+app/assembly.py:
+- SectionSpec(kind, label, question_count, minutes=35); kind is
+  "logical_reasoning" or "reading_comprehension".
+- PRESETS: "reduced" = LR 21 / LR 21 / RC 10 (sized so nothing repeats);
+  "blueprint" = LR 25 / LR 25 / RC 27 (the real thing).
+- AssemblyError for insufficient content. Do NOT name it TestAssemblyError —
+  pytest tries to collect any class starting with "Test", and for the same
+  reason this module must not be named app/test_assembly.py.
+- assemble_test(conn, preset, seed=None):
+  * NO QUESTION APPEARS TWICE anywhere in the paper. Draw LR without
+    replacement across ALL LR sections, not per section. This is the invariant
+    the tests pin.
+  * Spread LR across question_type by round-robin rather than taking a random
+    draw, so a section isn't one type repeated.
+  * Assemble RC BY WHOLE PASSAGE, never by sampling N questions: a passage is
+    read once and answered against several times, and independent sampling
+    strands questions whose passage the test never shows.
+  * Errors must NAME THE SHORTFALL ("need 50, have 42 (short by 8)") — that is
+    what keeps "blueprint" honest instead of silently serving a half-test.
+  * get_questions_filtered returns rows ORDER BY RANDOM(), so sort by id before
+    the seeded shuffle or `seed` won't actually reproduce anything.
+- content_warnings(conn): plain statements of where the bank falls short, for
+  the UI to display.
+
+API (reuse _row_to_public so the no-leak guarantee stays in one place):
+- GET /api/test/new?preset=reduced -> {preset, sections:[{kind,label,minutes,
+  passages,questions}], warnings:[...]}. No correct_answer, no explanation.
+  400 with the shortfall message when the bank can't fill the preset.
+- POST /api/test/grade -> {answers:[{question_id, selected_answer|null}]}.
+  Returns per-question results plus total/correct/answered. A BLANK IS SCORED
+  INCORRECT but logs NO attempt row — the real LSAT has no guessing penalty,
+  but a blank is still wrong, and logging a non-attempt would distort
+  /progress's accuracy-by-type. Answered questions DO log an attempt.
+
+FRONTEND — app/_components/Timer.tsx:
+- useCountdown(deadline) driven by a deadline TIMESTAMP, not a decrementing
+  counter: a backgrounded tab throttles intervals and a counter would hand back
+  time the taker didn't have.
+- CRITICAL: it must recompute DURING RENDER when the deadline changes, not only
+  in an effect. The plain useState+useEffect version returns a stale 0 on the
+  first render after a new deadline is set, and a caller that reads 0 as "time
+  is up" ends the section the instant it starts. This bug is invisible to unit
+  tests — it only shows up driving the real page.
+
+FRONTEND — app/test/page.tsx, phases idle / running / break / grading / results:
+- Fetch the paper on MOUNT so the start screen can state the content gap before
+  the test begins; "Start Test" only sets the deadline and flips the phase.
+- Start screen lists the sections and says plainly that the test is reduced,
+  that each section auto-ends, and that a reload loses everything.
+- Section runner: hard cutoff at 0:00 auto-submits and advances with no
+  confirmation. Free Previous/Next within a section. Answer state is a
+  {questionId: letter} map. Reuse QuestionCard with no result so nothing is
+  marked right or wrong mid-test. In the RC section, pin the passage beside the
+  question the way /reading-comp does.
+- Results: raw score, per-section counts, and per-question review reusing
+  GradeResultView. Say that scaled 120-180 scoring is v0.7.
+- Add a "Practice Test" nav link. No new CSS — reuse existing theme classes.
+
+TESTING: browser-verify with Playwright's clock.install() + fastForward() —
+that is what makes a 35-minute timer testable. Confirm each section
+auto-advances on expiry with no click.
+
+NOT YET IMPLEMENTED as of v0.6: scaled 120-180 scoring (v0.7 — v0.6 reports raw
+counts only); deployment (v0.8); resuming an interrupted test; RC content
+expansion (which would unlock the blueprint preset). The live Anthropic
+generate/verify pipeline still exists and has still never been run.
+```
+
+---
 
 ### [v0.5] Session 10 — 2026-08-10 (near-duplicate detection)
 
