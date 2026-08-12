@@ -40,6 +40,9 @@ type GradeResponse = {
   total: number;
   correct: number;
   answered: number;
+  scaled_score: number | null;
+  percentile: string | null;
+  scaled_is_estimated: boolean;
   results: QuestionResult[];
 };
 
@@ -331,18 +334,38 @@ export default function TestPage() {
 
       {phase === "results" && score && paper && (
         <div>
-          <div className="wood-panel" style={{ padding: 20, marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, marginBottom: 8 }}>Raw score</h2>
-            <p style={{ marginBottom: 8 }}>
+          <div className="stat-tile">
+            <div className="stat-tile-label">
+              {score.scaled_score === null
+                ? "Raw score"
+                : score.scaled_is_estimated
+                  ? "Estimated score"
+                  : "Scaled score"}
+            </div>
+
+            {score.scaled_score !== null && (
+              <>
+                <div className="stat-tile-value">{score.scaled_score}</div>
+                <p style={{ marginBottom: 10 }}>{score.percentile}</p>
+              </>
+            )}
+
+            <p>
               <strong>
                 {score.correct} of {score.total} correct
               </strong>{" "}
               ({Math.round((100 * score.correct) / score.total)}%)
+              {score.total - score.answered > 0 &&
+                ` · ${score.total - score.answered} left blank (scored incorrect)`}
             </p>
-            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {score.total - score.answered} left blank (scored incorrect). Scaled
-              120-180 scoring arrives in v0.7.
-            </p>
+
+            <div className="stat-tile-sub">
+              {score.scaled_score === null
+                ? "Too few questions to convert to the 120-180 scale."
+                : score.scaled_is_estimated
+                  ? `Estimated from a reduced-length test (${score.total} questions vs ~76 on the real LSAT), so treat it as a ballpark rather than a predicted score.`
+                  : "Converted from your raw score using a representative LSAT scale."}
+            </div>
           </div>
 
           {paper.sections.map((s) => {

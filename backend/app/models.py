@@ -84,6 +84,13 @@ class TestGradeResponse(BaseModel):
     total: int
     correct: int
     answered: int
+    # null when the test was too short to scale meaningfully — see
+    # scoring.MIN_ITEMS_FOR_SCALING.
+    scaled_score: int | None
+    percentile: str | None
+    # True whenever the paper wasn't blueprint length, i.e. the scaled score was
+    # extrapolated from a percentage rather than read off the table directly.
+    scaled_is_estimated: bool
     results: list[TestQuestionResult]
 
 

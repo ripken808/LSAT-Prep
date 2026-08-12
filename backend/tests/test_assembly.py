@@ -251,3 +251,67 @@ def test_grade_test_rejects_unknown_question_id(seeded):
         json={"answers": [{"question_id": 999999, "selected_answer": "A"}]},
     )
     assert response.status_code == 404
+
+
+def _answer_whole_test(client, correct_count: int) -> dict:
+    """Take a real assembled paper and answer `correct_count` of it correctly."""
+    paper = client.get("/api/test/new").json()
+    question_ids = [q["id"] for s in paper["sections"] for q in s["questions"]]
+
+    answers = []
+    for index, question_id in enumerate(question_ids):
+        # The seeded bank keys LR to "C" and RC to "B"; "A" is always wrong.
+        answers.append(
+            {
+                "question_id": question_id,
+                "selected_answer": None if index >= correct_count else "correct",
+            }
+        )
+    # Resolve "correct" against the stored key so this works for both sections.
+    graded = client.post("/api/test/grade", json={"answers": [
+        {"question_id": a["question_id"], "selected_answer": None} for a in answers
+    ]}).json()
+    keys = {r["question_id"]: r["correct_answer"] for r in graded["results"]}
+    for answer in answers:
+        if answer["selected_answer"] == "correct":
+            answer["selected_answer"] = keys[answer["question_id"]]
+
+    return client.post("/api/test/grade", json={"answers": answers}).json()
+
+
+def test_grading_a_full_test_returns_a_scaled_score_on_the_lsat_scale(seeded):
+    _db_path, client = seeded
+    body = _answer_whole_test(client, correct_count=30)
+
+    assert 120 <= body["scaled_score"] <= 180
+    assert body["percentile"]
+    # 52 questions is not blueprint length, so the score is extrapolated.
+    assert body["scaled_is_estimated"] is True
+
+
+def test_a_perfect_full_test_scores_180_and_a_blank_one_scores_120(seeded):
+    _db_path, client = seeded
+    paper = client.get("/api/test/new").json()
+    total = sum(len(s["questions"]) for s in paper["sections"])
+
+    assert _answer_whole_test(client, correct_count=total)["scaled_score"] == 180
+    assert _answer_whole_test(client, correct_count=0)["scaled_score"] == 120
+
+
+def test_a_partial_answer_list_is_too_short_to_scale(seeded):
+    db_path, client = seeded
+    with get_connection(db_path) as conn:
+        rows = conn.execute("SELECT id FROM questions LIMIT 3").fetchall()
+
+    body = client.post(
+        "/api/test/grade",
+        json={
+            "answers": [
+                {"question_id": row["id"], "selected_answer": "C"} for row in rows
+            ]
+        },
+    ).json()
+
+    # Three questions cannot produce a meaningful 120-180 score.
+    assert body["scaled_score"] is None
+    assert body["percentile"] is None

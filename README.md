@@ -17,9 +17,9 @@ conventions and `prompt.md` for the detailed session-by-session log.
 > check a box off early to look further along than the project actually is.
 >
 > **Version numbers are scope IDs, not build order.** Actual completion order so
-> far: v0.4 → v0.9 → v0.1 → v0.2 → v0.3 → v0.5 → v0.6 (seven done). See the Build order
-> column in `prompt.md`'s Version Plan for the full record and why the numbers
-> were not renumbered.
+> far: v0.4 → v0.9 → v0.1 → v0.2 → v0.3 → v0.5 → v0.6 → v0.7 (eight done). See the
+> Build order column in `prompt.md`'s Version Plan for the full record and why the
+> numbers were not renumbered.
 
 - [x] **v0.1** — Hand-authored, independently-verified Logical Reasoning
       question bank (14 questions, all 14 official LR types) + verified answer
@@ -43,7 +43,11 @@ conventions and `prompt.md` for the detailed session-by-session log.
       35-minute cutoff each, no feedback until submission, then raw score and
       per-question review. Ships at **reduced** section sizes (21/21/10) — the
       bank can't fill a real blueprint yet, and the app says so.
-- [ ] **v0.7** — Scaled score conversion (120-180).
+- [x] **v0.7** — Scaled score conversion (120-180): the `/test` results screen
+      now headlines an estimated scaled score plus an approximate percentile,
+      converted from the raw score. Because the test runs at reduced length, the
+      raw score is normalized to a percentage before conversion and the result
+      is labelled an estimate.
 - [ ] **v0.8** — Deploy so friend can access it online.
 - [x] **v0.9** — Growtopia-inspired visual theme (cosmetic/CSS-only; original
       pixel-chunky UI, question-reading screen stays clean/unstyled).

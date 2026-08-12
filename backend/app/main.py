@@ -3,7 +3,7 @@ import json
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import assembly
+from app import assembly, scoring
 from app.config import GENERATION_MODE
 from app.db import (
     get_attempts_by_day,
@@ -240,10 +240,16 @@ def grade_test(body: TestGradeRequest):
                 )
             )
 
+    total = len(body.answers)
+    scaled = scoring.scaled_score(correct_count, total)
+
     return TestGradeResponse(
-        total=len(body.answers),
+        total=total,
         correct=correct_count,
         answered=answered_count,
+        scaled_score=scaled,
+        percentile=scoring.percentile_band(scaled) if scaled is not None else None,
+        scaled_is_estimated=scoring.is_estimated(total),
         results=results,
     )
 

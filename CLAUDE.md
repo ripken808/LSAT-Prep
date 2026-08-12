@@ -139,7 +139,9 @@ log is a narrative for humans; the reconstruction prompt is a rebuild spec.
 
 ## Tech Stack
 
-- **Language(s):** Python 3.11+ (backend), TypeScript (frontend)
+- **Language(s):** Python (backend) — `requires-python = ">=3.11"` in
+  `backend/pyproject.toml`, but the local venv resolves to 3.14, which is what
+  the test suite actually runs on. TypeScript (frontend).
 - **Framework(s):**
   - Backend: FastAPI (`backend/app/main.py`) — async-friendly, good fit for
     calling the Anthropic API without blocking.
@@ -200,11 +202,14 @@ lsat-prep/
                        400 with a countable shortfall when the bank can't
                        fill the preset), POST /api/test/grade (whole-test
                        batch grading; blank = incorrect, logs an attempt per
-                       answered question)
+                       answered question; returns scaled_score/percentile/
+                       scaled_is_estimated alongside the raw counts)
       db.py         - sqlite3 connection/schema (questions, passages,
                        attempts, embeddings tables)
       models.py     - Pydantic request/response models
-      config.py     - env loading (ANTHROPIC_API_KEY, GENERATION_MODE, DB_PATH)
+      config.py     - env loading (ANTHROPIC_API_KEY, GENERATION_MODE).
+                       NOTE: DB_PATH lives here but is a hardcoded constant,
+                       NOT env-overridable — see prompt.md Backlog.
       generation.py - live generate -> independent re-solve -> retry pipeline
       prompts.py    - system prompts (methodology reference, rigor
                        requirements, target-quality example)
@@ -218,6 +223,10 @@ lsat-prep/
       similarity.py - near-duplicate detection: text-to-embed selection,
                        cosine similarity, pair ranking. Model import is lazy,
                        so importing this module never pulls PyTorch.
+      scoring.py    - raw -> scaled (120-180) conversion + interpolated
+                       percentile. Pure functions, no I/O. Normalizes raw to a
+                       percentage before converting, because the reduced paper
+                       is 52 questions and the scale is built for 76.
       rc_content.py - hand-authored RC passages + questions (same
                        verification method as LR)
     scripts/
@@ -228,9 +237,9 @@ lsat-prep/
                        (needs the optional `dedup` extra)
     tests/          - pytest: test_grading.py, test_stats.py,
                        test_reading_comp.py, test_filtering.py,
-                       test_similarity.py, test_assembly.py (no live API
-                       calls, and no model download — the suite runs without
-                       PyTorch) — 51 tests
+                       test_similarity.py, test_assembly.py, test_scoring.py
+                       (no live API calls, and no model download — the suite
+                       runs without PyTorch) — 76 tests
     data/           - sqlite file (gitignored)
   frontend/         - Next.js 16 (App Router, TypeScript), npm-managed
     app/
@@ -252,7 +261,8 @@ lsat-prep/
       test/page.tsx - /test full-length timed practice test: start screen
                        (structure + content-gap warnings), timed section
                        runner with a hard cutoff, between-section break,
-                       raw score and per-question review
+                       scaled score + percentile + raw counts, and
+                       per-question review
       focus/page.tsx - /focus filtered practice: pick question types and/or
                        RC content areas (options + counts come from
                        /api/taxonomy), then cycle the matched set with a
@@ -321,9 +331,10 @@ lsat-prep/
 - **Run tests:** `cd backend && uv run pytest`
 - **Lint:** not configured yet.
 - **Build (frontend):** `cd frontend && npm run build` — run and passing as of
-  v0.2 (Next.js 16 / Turbopack; all 4 routes prerender static: `/`,
-  `/progress`, `/reading-comp`, `/_not-found`). `npx tsc --noEmit` also passes
-  clean. No backend build step (interpreted, no packaging target).
+  v0.6 (Next.js 16 / Turbopack; all 6 routes prerender static: `/`,
+  `/focus`, `/progress`, `/reading-comp`, `/test`, `/_not-found`).
+  `npx tsc --noEmit` also passes clean. No backend build step (interpreted, no
+  packaging target).
 - **Deploy:** not yet decided — see Project Overview → Deployment.
 
 ## Do NOT touch / modify without asking

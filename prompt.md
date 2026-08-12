@@ -9,45 +9,54 @@
 
 ## Current State (overwrite this section each time — don't append)
 
-- **Current version:** v0.6 (full-length timed practice test) — **complete.**
-  Seven versions done, in this actual order:
-  v0.4 -> v0.9 -> v0.1 -> v0.2 -> v0.3 -> v0.5 -> v0.6. This closes the user's
-  oldest outstanding request, first asked for in Session 5.
-- **v0.6 final state.** `app/assembly.py` builds a paper from section presets:
-  no question appears twice anywhere in the test, LR is spread across question
-  types rather than randomly drawn, and RC is assembled by whole passage.
-  `GET /api/test/new` serves it with no answers and a `warnings` list;
-  `POST /api/test/grade` grades the whole paper at once, scores blanks as
-  incorrect, and logs an attempt per *answered* question so a test feeds
-  `/progress` like ordinary practice. `/test` runs it: hard 35-minute cutoff per
-  section, free navigation within a section, no right/wrong shown until
-  submission, then raw score plus per-question review. 51 tests, up from 36.
-- **It ships at reduced sizes, and says so.** Sections are 21/21/10 rather than
-  the real 24-26/24-26/26-28, because the bank holds 42 LR and 10 RC across 2
-  passages. A blueprint-accurate test would serve every RC question 2.7 times.
-  The `blueprint` preset exists and returns a 400 naming the shortfall
-  ("need 50, have 42 (short by 8)"), and the start screen states the gap rather
-  than implying the test is full-length.
-- **One bug worth remembering, found in the browser and not by the tests:**
-  `useCountdown` initially used the ordinary useState+useEffect shape, which
-  returns a stale 0 on the first render after a new deadline is set. The caller
-  treats 0 as "time is up", so clicking Start Test ended section 1 instantly.
-  The hook now derives its value during render and carries a comment saying not
-  to simplify it back.
-- **Verified end to end in a real browser** using Playwright's clock control to
-  fast-forward: the timer ticks correctly, each section auto-advances on expiry
-  with no click, the RC section renders its passage beside the question, the
-  final expiry auto-submits, and the score is self-consistent (5 answered, 47
-  blank of 52). Zero console errors.
-- **Repo status:** all seven completed versions are pushed and tagged on
-  `github.com/ripken808/LSAT-Prep` — v0.1, v0.2, v0.3, v0.4, v0.5, v0.6, v0.9.
-  Working tree clean, `main` in sync with origin. Nothing is waiting to be
-  pushed.
+- **Current version:** v0.7 (scaled score conversion, 120-180) — **complete,
+  pending the user's confirmation before commit/tag.** Eight versions done, in
+  this actual order:
+  v0.4 -> v0.9 -> v0.1 -> v0.2 -> v0.3 -> v0.5 -> v0.6 -> v0.7.
+- **v0.7 final state.** `app/scoring.py` holds the whole version as pure
+  functions with no I/O: a `CONVERSION_TABLE` mapping raw-out-of-76 to 120-180,
+  `PERCENTILE_ANCHORS` for an interpolated percentile, and
+  `scaled_score` / `percentile_band` / `is_estimated`. `POST /api/test/grade`
+  gained three fields (`scaled_score`, `percentile`, `scaled_is_estimated`);
+  grading logic itself is untouched. The `/test` results screen now headlines
+  the scaled score, reusing `/progress`'s existing `.stat-tile` classes — no new
+  CSS. 76 tests, up from 51.
+- **The central problem it solves: the test is 52 questions, the scale is built
+  for 76.** Reading 31 straight off a 76-item table would score it as 41% when it
+  is really 60% — a ~11-point scaled error. So `scaled_score` normalizes to a
+  percentage first, converts to an equivalent raw out of 76, and then looks up.
+  `is_estimated(total)` returns `total != 76`, so the "Estimated score" label
+  flips to "Scaled score" on its own the day RC expansion makes a blueprint-
+  length paper possible — no code change needed.
+- **Two accuracy bugs found and fixed during the build, both in the percentile,
+  both invisible to a passing test suite.** (1) Bucketing to the nearest 5-point
+  anchor and taking the floor understated the middle of the curve badly: a 154
+  reported "~45th percentile" when the real figure is ~62nd, because five scaled
+  points span ~20 percentile points there. Fixed by interpolating between
+  anchors. (2) The top anchor is 99.9, which `round()` turned into a
+  "~100th percentile" — a percentile that cannot exist. Now capped to
+  "99th percentile or above".
+- **Verified end to end in a real browser** with Playwright clock control:
+  started a test, answered part of section 1, fast-forwarded through all three
+  section expiries, and the results screen rendered the scaled score, percentile
+  and caveat correctly with zero console errors. Separately confirmed the whole
+  curve through the live API (26/52 -> 148, 31/52 -> 154, 36/52 -> 160,
+  47/52 -> 174, 52/52 -> 180).
+- **The verification did not pollute practice data.** Grading a paper against the
+  running app writes real `attempts` rows, so `backend/data/lsat_prep.db` was
+  backed up to the scratchpad first and restored afterward — confirmed back at
+  5 attempt rows. Worth repeating for any future browser verification that
+  submits a test.
+- **Repo status:** v0.7 is **not yet committed or tagged** — awaiting user
+  confirmation per the Finishing a Version checklist. Seven prior versions are
+  pushed and tagged on `github.com/ripken808/LSAT-Prep`. The working tree also
+  carries a small CLAUDE.md doc fix from the start of this session (stale route
+  list, Python version wording), intended to ride along with the v0.7 commit.
 - **Branch:** main
-- **Blockers:** none. The obvious next candidates are v0.7 (scaled 120-180
-  scoring, which now has a real raw score to convert), v0.8 (deploy), RC content
-  expansion (which would unlock the blueprint preset), or the structural tell
-  checker from v0.5's Backlog.
+- **Blockers:** none. Next candidates are v0.8 (deploy — the last core feature
+  and the actual point of the project), RC content expansion (which would unlock
+  the blueprint preset and flip v0.7's estimate label to exact), or the
+  structural tell checker from v0.5's Backlog.
 
 ---
 
@@ -81,7 +90,7 @@
 | v0.4    | Practice stats dashboard (Gamification Concept 1 only — no streaks/XP/badges): `attempts` table (question_id, selected_answer, correct, explanation_viewed, answered_at) written by the grading endpoint as a pure side effect — grading logic itself does not change, zero read dependency on this data. `/progress` page (own nav link, never shown during a question): overall accuracy, accuracy by question type, attempts over time. | [x] DONE — 2026-08-09, visually confirmed via Playwright screenshots | **Written 2nd, completed 1st** — the first version ever finished. Tag `v0.4` = `6725b0b`, 2026-08-09 18:35. Built on top of an *incomplete* v0.1. |
 | v0.5    | **REVISED 2026-08-10.** Near-duplicate detection over the question bank: `app/similarity.py` (text selection, cosine similarity, pair ranking, lazy model load), an `embeddings` cache table keyed by content hash, and `scripts/check_duplicates.py` reporting the closest pairs. Local embeddings (`BAAI/bge-small-en-v1.5`) behind an optional `dedup` extra — no API key, no spend, and the app and test suite never need PyTorch. Rescoped from "gate live generation" to an **authoring-time** check, because the app has no runtime generation to gate. No Postgres/pgvector. | [x] DONE — 2026-08-10. Reports pairs; caches by content hash. **Does not detect the structural/architectural duplication that motivated it — see the Backlog item and Session 10.** | **Written 6th, completed 6th** — tag `v0.5`, 2026-08-10. |
 | v0.6    | **REVISED 2026-08-11.** Full-length timed practice test: `app/assembly.py` (section presets, no-repeat sampling across the whole paper, LR spread across question types, RC assembled by whole passage), `GET /api/test/new`, `POST /api/test/grade` (batch, blank = incorrect), and a `/test` page with a hard 35-minute cutoff per section, free navigation within a section, no feedback until submission, and raw-score + per-question review. **Ships at REDUCED section sizes (21/21/10) because the bank cannot fill a real blueprint** — a `blueprint` preset exists and refuses with a countable shortfall until the content is there. State is in-memory; a reload loses the test. | [x] DONE — 2026-08-11. Verified end to end in a browser including real timer expiry auto-advancing all three sections. | **Written 7th, completed 7th** — tag `v0.6`, 2026-08-11. |
-| v0.7    | Scaled score conversion (120-180)                                                                                                                                                                                                                                      | [ ] not started | Not started, order undecided. Depends on v0.6 existing to score against. |
+| v0.7    | **SCOPED 2026-08-12.** Scaled score conversion (120-180): `app/scoring.py` (pure functions — a raw-out-of-76 conversion table, interpolated percentile anchors, `scaled_score`/`percentile_band`/`is_estimated`), three additive fields on `POST /api/test/grade`, and a reworked `/test` results panel that headlines the scaled score plus an approximate percentile. Because the paper runs at reduced length (52 vs ~76), the raw score is **normalized to a percentage before conversion** and the result is labelled an estimate. Deliberately excludes score persistence/history, any `/progress` change, and scaled scoring on single-question or `/focus` practice. | [x] DONE — 2026-08-12. 76 tests, up from 51. Browser-verified end to end; full curve confirmed through the live API. | **Written 8th, completed 8th** — the first version whose number matches its build position. |
 | v0.8    | Deploy so friend can access it online                                                                                                                                                                                                                                  | [ ] not started | Not started, order undecided — and note v0.9 (numbered *after* it) is already done, so this number in particular implies nothing about sequence. |
 | v0.9    | Growtopia-inspired visual theme (cosmetic/CSS-only — no grading/generation/data-model changes). Original pixel-chunky UI: wood-panel borders/textures, beveled 3D block buttons, bright saturated palette, applied to nav, buttons, general chrome, and the themed `/progress` dashboard. Press Start 2P reserved for headings/large stat numbers only; a legible rounded sans font for nav links, button labels, and badge text. The question-reading screen (stimulus/stem/choices) stays clean, high-contrast, unstyled by the pixel theme. | [x] DONE — 2026-08-09, visually confirmed via Playwright screenshots | **Written 3rd, completed 2nd** — same commit/tag moment as v0.4 (`6725b0b`, 2026-08-09 18:35), since both were verified together in Session 4. Completed *before* v0.1 and v0.2 despite the highest number. |
 | v0.x    | [add more as scope becomes clearer]                                                                                                                                                                                                                                    | [ ] not started | — |
@@ -100,15 +109,19 @@
       expansion to 3 questions per type.
 - [x] v0.5 built 6th: near-duplicate detection over the question bank.
 - [x] v0.6 built 7th: full-length timed practice test at reduced section sizes.
-- [ ] Decide what gets built 8th. Live options: **v0.7** (scaled 120-180
-      scoring — v0.6 now produces a raw score to convert, so this is unblocked
-      and small); **v0.8** (deploy, the last core feature and the reason the
-      project exists — a friend can't use localhost); **RC content expansion**
-      (2 passages + ~17 questions, which would unlock v0.6's blueprint preset);
-      or the **structural tell checker** from v0.5's Backlog.
+- [x] v0.7 built 8th: scaled score conversion (120-180) on the `/test` results
+      screen, with an interpolated percentile.
+- [ ] Decide what gets built 9th. Live options: **v0.8** (deploy — the last core
+      feature and the reason the project exists; a friend can't use localhost);
+      **RC content expansion** (2 passages + ~17 questions, which would unlock
+      v0.6's blueprint preset *and* flip v0.7's "Estimated score" label to an
+      exact "Scaled score" with no code change); or the **structural tell
+      checker** from v0.5's Backlog.
 - [ ] Remaining Backlog: too-easy distractor rewrites, residual answer-length
       tell, `MOCK_QUESTIONS[2]` exemplar contamination, the two `/progress` bugs
-      (orphaned attempts, UTC date bucketing), and the empty-DB startup warning.
+      (orphaned attempts, UTC date bucketing), the empty-DB startup warning,
+      `DB_PATH` not actually env-overridable, and score history (deferred out of
+      v0.7).
 
 ## Backlog (out-of-scope for current version — don't build yet)
 
@@ -185,6 +198,22 @@
 - [ ] **ADVERSARIAL SWEEP of the 11 remaining v0.1 questions** that were only
       ever single-pass verified (indices 3, 6, 7, 8, 12 and the rest of the
       original 14 not covered in Session 9's re-check).
+- [ ] **SCORE HISTORY (deferred out of v0.7, 2026-08-12):** v0.7 converts a raw
+      score to 120-180 and displays it, but nothing is persisted — reload the
+      results screen and the score is gone. A score-over-time view is the
+      natural follow-on (a `test_results` table plus a chart on `/progress`),
+      and was deliberately kept out of v0.7 to hold its scope. It is close to a
+      version of its own; scope it as one rather than bolting it onto v0.8.
+- [ ] **`DB_PATH` is not env-overridable (found 2026-08-12).** CLAUDE.md's Tech
+      Stack describes `config.py` as "env loading (ANTHROPIC_API_KEY,
+      GENERATION_MODE, DB_PATH)", but `DB_PATH` is a hardcoded constant —
+      only the other two read from the environment. This bit during v0.7's
+      browser verification: grading a test against the running app writes real
+      `attempts` rows, and with no way to point the server at a scratch DB the
+      only safe route was backing up and restoring `backend/data/lsat_prep.db`
+      by hand. Fix is one line (`os.environ.get("DB_PATH", ...)`) and would make
+      end-to-end verification non-destructive by default. Left alone during v0.7
+      to hold scope.
 - [ ] **BUG (minor, same root cause as the log-date confusion):** `answered_at`
       is stored as UTC and `get_attempts_by_day()` groups on `substr(answered_at,
       1, 10)`, so `/progress`'s "attempts over time" buckets by **UTC** date.
@@ -220,6 +249,10 @@
 | 2026-08-11   | RC sections are assembled by whole passage, never by sampling N questions | A passage is read once and answered against several times. Sampling questions independently would strand questions whose passage the test never shows. This mirrors how `/reading-comp` already works. |
 | 2026-08-11   | `useCountdown` derives its value during render rather than in an effect | The obvious useState+useEffect shape returns a stale 0 on the first render after a new deadline is set, and the caller treats 0 as "time is up" — so starting a section instantly ended it. Found in the browser, not by the tests. The hook carries a comment saying not to simplify it back. |
 | 2026-08-11   | A blank answer is scored incorrect but logs no attempt row | The real LSAT has no guessing penalty, but a blank is still wrong. Logging a non-attempt would distort `/progress`'s accuracy-by-type, which counts attempts. |
+| 2026-08-12   | v0.7 normalizes the raw score to a percentage before converting, rather than looking it up directly | Real conversion tables map a raw score out of ~76 scored items; the reduced paper is 52. A direct lookup would read 31 as 31/76 (41%, ~143) when it means 31/52 (60%, ~154) — an ~11-point error understating every score. Normalizing costs one line and makes the same table correct at any test length. The alternatives considered and rejected: a score band (more honest about precision, but harder to track improvement against) and refusing to scale reduced tests at all (ships nothing usable, since `blueprint` currently 400s on a content shortfall). |
+| 2026-08-12   | The conversion table is a representative composite curve, explicitly not a transcription of any published form's table | Real LSAT tables are equated per test form, so a given raw score maps to slightly different scaled scores on different tests — there is no single "the" table to copy, and presenting one as authoritative would overstate what this app can know. The docstring says so, and `is_estimated` keeps the UI honest about it. |
+| 2026-08-12   | Percentiles are interpolated between 5-point anchors, not floored to the anchor below | The first implementation floored, which understated the middle of the curve badly: a 154 reported "~45th percentile" against a real ~62nd, because five scaled points span ~20 percentile points where the curve is steepest. A passing test suite would not have caught this — the bug was in the shape of the data, not the code. Also capped the top at "99th percentile or above", because rounding the 99.9 anchor produced a 100th percentile, which cannot exist. |
+| 2026-08-12   | v0.7 scoped to conversion + display only; score persistence/history deferred to its own version | The Version Plan entry is "scaled score conversion", and a history view needs a new table plus dashboard work — pulling it in would repeat exactly the scope creep the Versioning Strategy exists to prevent. Logged to Backlog with a note that it is close to a version of its own. |
 | 2026-08-10   | v0.5 rescoped from a runtime gate on generation to an authoring-time check over the hand-authored bank | Its stated job was gating generated questions, but the app has no runtime generation — the live pipeline in `generation.py` has never been run, so a runtime gate would be infrastructure with no traffic. The bank itself, however, is unmeasured, and v0.3's adversarial pass had already found near-duplicates in it. User chose the authoring-time scope. |
 | 2026-08-10   | Local embeddings behind an OPTIONAL `dedup` extra; numpy promoted to a core dependency | Anthropic has no embeddings endpoint (checked against the current API surface via the `claude-api` skill), so this meant either a second vendor or a local model; user chose local. `sentence-transformers` pulls PyTorch — the venv goes from ~90MB to **790MB**, which is far too heavy to require for running the app or the tests. Making it an extra keeps `uv run pytest` working with no PyTorch installed (verified). I had told the user "~90MB model" when asking; that was the model file, not the dependency, and the correction is recorded here. |
 | 2026-08-10   | Embedding model is `BAAI/bge-small-en-v1.5` (512-token context), not the obvious `all-MiniLM-L6-v2` | MiniLM truncates at 256 tokens. The bank's longest question — a parallel-reasoning item whose five choices are each full arguments — is 271 tokens, so it would have been silently cut. bge-small gives ~2x headroom at the same 384 dimensions. `embed()` now raises on any text over the model's limit rather than letting truncation pass silently. |
@@ -244,6 +277,7 @@
 | 5th              | v0.3    | 2026-08-10       | tag `v0.3`    | Session 9 entry below    |
 | 6th              | v0.5    | 2026-08-10       | tag `v0.5`    | Session 10 entry below   |
 | 7th              | v0.6    | 2026-08-11       | tag `v0.6`    | Session 11 entry below   |
+| 8th              | v0.7    | 2026-08-12       | tag `v0.7` (pending) | Session 13 entry below |
 
 Note on ordering: the completion order above is NOT the version-number order
 — see the Version Plan's Build order column for the full explanation. v0.1
@@ -259,6 +293,172 @@ so a prompt does not correspond to the full contents of its tagged commit.
 ## Session Log
 
 > Newest entry at the top. Tag each entry with the version it belongs to.
+
+### [v0.7] Session 13 — 2026-08-12 (scaled score conversion, 120-180)
+
+**Prompt(s) used:**
+
+```
+/resume
+fix these inconsistencies before continueing
+lets continue where we left off
+[AskUserQuestion picked v0.7 as the 8th version; three further scoping
+decisions via AskUserQuestion: normalize-to-percentage over score-band or
+raw-only, conversion+display only over persisting a score history, and
+including an approximate percentile band]
+```
+
+**What was done:**
+
+- **Session opened by reconciling docs against reality.** Two stale claims in
+  CLAUDE.md were found and fixed before any code: the frontend build note still
+  listed 4 routes (there are 6 — `/focus` and `/test` were never added) and
+  still said "as of v0.2"; the Python line conflated the `>=3.11` floor with the
+  3.14 the venv actually runs. Every other countable claim in the docs was
+  checked against source and was accurate (42 LR / 2 passages / 10 RC / 52 total
+  / 51 tests).
+- **Surfaced the version's central problem before designing anything.** Real
+  conversion tables are built for ~76 scored items; the reduced paper is 52. A
+  direct lookup would have understated every score by ~11 points. The user chose
+  percentage normalization, which makes one table correct at any length.
+- Built `app/scoring.py` as pure functions with no I/O (same shape as
+  `similarity.py`'s core), added three additive fields to `TestGradeResponse`,
+  wired them in `grade_test` without touching grading logic, and reworked the
+  `/test` results panel.
+- **Reused rather than rebuilt.** The results panel headline uses `/progress`'s
+  existing `.stat-tile` / `.stat-tile-value` / `.stat-tile-sub` classes — the
+  first draft hand-rolled inline styles and a `--font-display` token that does
+  not exist (it is `--font-heading`). No new CSS, holding v0.6's constraint.
+- `tests/test_scoring.py` (22 tests) plus 3 endpoint tests appended to
+  `test_assembly.py`. 76 total, up from 51.
+
+**What broke / what to watch:**
+
+- **Both real bugs this session were in the percentile, and both were invisible
+  to a green test suite** — the defect was in the shape of the data, not the
+  code. (1) Flooring to the nearest 5-point anchor understated the steep middle
+  of the curve: 154 reported "~45th percentile" against a real ~62nd. Fixed by
+  interpolating. (2) `round()` turned the 99.9 top anchor into a "100th
+  percentile", which does not exist. Both were caught by *printing the actual
+  curve and reading it*, not by a test. Worth doing for any lookup table.
+- **Grading against the running app writes real `attempts` rows.** Browser
+  verification submits a whole 52-question paper, which would have injected 52
+  fake attempts into `/progress`. Handled by backing up
+  `backend/data/lsat_prep.db` to the scratchpad and restoring after (confirmed
+  back at 5 rows). The underlying cause — `DB_PATH` is hardcoded, not
+  env-overridable despite CLAUDE.md saying otherwise — is logged to Backlog.
+- One self-inflicted test failure: `scaled_score(5, 3)` asserted `None` but
+  correctly raised, since 5 correct out of 3 is impossible. The guard was right,
+  the test was wrong.
+- Playwright is not a project dependency; it resolved only from the npx cache,
+  so the verification script imports it by absolute path. Fine for a throwaway
+  script, but a real frontend suite would need it installed properly.
+
+**Next session should:**
+
+- Pick the 9th version. **v0.8 (deploy)** is the last core feature and the actual
+  point of the project — the friend cannot use localhost. **RC content
+  expansion** is the highest-leverage content work: it unlocks v0.6's blueprint
+  preset *and* flips v0.7's "Estimated score" to an exact "Scaled score" with no
+  code change, since `is_estimated` keys off test length alone.
+
+**Reconstruction prompt — v0.7 (scaled score conversion, 120-180):**
+
+```
+Rebuild this project (LSAT Prep) to v0.7's state. Everything in the v0.1, v0.2,
+v0.3, v0.5 and v0.6 reconstruction prompts, PLUS raw-to-scaled score conversion
+on the practice test's results screen.
+
+SCOPE NOTE — READ FIRST: this is conversion AND DISPLAY ONLY. Do NOT persist
+test results, do NOT add a score-history table or chart, do NOT touch
+/progress, and do NOT add scaled scoring to single-question or /focus practice
+— a scaled score is only meaningful for a whole test. Those are later versions.
+
+THE CENTRAL PROBLEM: real LSAT conversion tables map a raw score out of ~76
+scored items (2 LR sections of 24-26 plus RC of 26-28) onto 120-180. The bank
+only supports a 52-question "reduced" paper. Looking a reduced raw score up
+directly is WRONG and is the specific bug to avoid: 31 read as 31/76 is 41%
+(~143), but it actually means 31/52, 60% (~154) — every score understated by
+roughly 11 points. Normalize to a percentage FIRST, then convert.
+
+app/scoring.py — pure functions, NO I/O, no DB, no network (mirrors the shape
+of similarity.py's core so it is trivially testable):
+- CANONICAL_ITEM_COUNT = 76.
+- MIN_ITEMS_FOR_SCALING = 30. Below this, scaled_score returns None — a scaled
+  score off a handful of questions is a number without a meaning, and
+  /api/test/grade is reachable with any answer list, not just a whole paper.
+- CONVERSION_TABLE: list[(minimum_raw_out_of_76, scaled)], descending, covering
+  every scaled point 120-180 EXACTLY ONCE. Anchors: 75->180, 65->170, 53->160,
+  40->150, 27->140, 17->130, 0->120. Make it a REPRESENTATIVE COMPOSITE curve
+  and say so in the docstring — real tables are equated per test form, so there
+  is no single authoritative table to copy, and presenting one as official
+  overstates what the app can know.
+- PERCENTILE_ANCHORS: list[(scaled, percentile)] every 5 points, 120->0.0 up to
+  180->99.9 (150->45.0, 155->66.0, 160->81.0 are the ones that matter most).
+- approximate_percentile(scaled): INTERPOLATE linearly between anchors. Do NOT
+  floor to the anchor below — the curve is steepest in the middle where five
+  scaled points span ~20 percentile points, so flooring reports a 154 as the
+  150 anchor's ~45th when the real answer is ~62nd. This is a silent accuracy
+  bug that a passing test suite will not catch.
+- percentile_band(scaled) -> str: "below the 1st percentile" under 1%;
+  "99th percentile or above" at 99%+ — do NOT let round() turn the 99.9 anchor
+  into a "100th percentile", which cannot exist; otherwise "~62nd percentile"
+  with a CORRECT ordinal suffix (11/12/13 take "th", not "st"/"nd"/"rd").
+- scaled_score(correct, total) -> int | None: raise ValueError on negative
+  inputs or correct > total; return None below MIN_ITEMS_FOR_SCALING; else
+  round(correct / total * 76) and take the first matching table row.
+- is_estimated(total) -> bool: total != CANONICAL_ITEM_COUNT. Keyed off test
+  LENGTH, not a hardcoded flag, so the UI label corrects itself for free once
+  the bank can fill a blueprint-length paper.
+
+API — models.py adds three ADDITIVE fields to TestGradeResponse (change nothing
+existing): scaled_score: int | None, percentile: str | None,
+scaled_is_estimated: bool. main.py's grade_test populates them at the existing
+return. GRADING LOGIC IS UNTOUCHED — same deterministic key match, same
+attempt-logging side effect, blanks still incorrect and still log nothing.
+
+FRONTEND — app/test/page.tsx results panel only:
+- REUSE /progress's existing .stat-tile / .stat-tile-label / .stat-tile-value /
+  .stat-tile-sub classes. Add NO new CSS. (The display font token is
+  --font-heading; there is no --font-display.)
+- Scaled score is the headline; percentile beneath it; raw count demoted to
+  supporting text; the estimate caveat in .stat-tile-sub naming the actual
+  question count vs ~76.
+- Label reads "Estimated score" when scaled_is_estimated, "Scaled score"
+  otherwise, and falls back to today's raw-only display when scaled_score is
+  null.
+- Delete the old "Scaled 120-180 scoring arrives in v0.7." line.
+
+TESTING — tests/test_scoring.py, pure functions, no DB or fixtures:
+- TABLE INTEGRITY FIRST: assert the conversion table covers 120-180 with no
+  gaps or repeats and descends on both columns; assert percentile anchors ascend
+  and span 120-180. A lookup table rots silently — a typo'd row still returns a
+  plausible number.
+- The version's whole point: 31/52 and 31/76 must differ by >= 5 scaled points.
+- Equal percentages scale alike within 1 point regardless of test length.
+- Interpolation: approximate_percentile(154) lands in 60-64, not ~45.
+- No output anywhere on the scale contains "100th".
+- Boundaries (0 -> 120, perfect -> 180), the None guard, the three ValueError
+  cases, ordinal suffixes.
+Plus endpoint tests in test_assembly.py: grade a REAL assembled paper (grade
+once with all blanks to read the keys back, then re-grade) and assert the scaled
+score is in range, that a perfect paper is 180 and a blank one 120, and that a
+3-answer POST returns scaled_score: null.
+
+VERIFY IN A BROWSER, and back up backend/data/lsat_prep.db first — submitting a
+test writes real attempts rows and will otherwise pollute /progress with fake
+data. DB_PATH is hardcoded, so there is no env override to point at a scratch
+DB. Use Playwright clock.install() + fastForward('36:00') per section to reach
+the results screen without answering 52 questions by hand.
+
+NOT YET IMPLEMENTED as of v0.7: score persistence/history (no test_results
+table — reload the results screen and the score is gone); deployment (v0.8); RC
+content expansion, which would unlock v0.6's blueprint preset and flip
+is_estimated to False on its own. The live Anthropic generate/verify pipeline
+still exists and has still never been run.
+```
+
+---
 
 ### [process] Session 12 — 2026-08-12 (session close-out; push policy changed)
 
